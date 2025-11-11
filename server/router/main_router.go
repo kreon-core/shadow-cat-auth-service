@@ -1,0 +1,61 @@
+package router
+
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	"scs-auth-service/config"
+	"scs-auth-service/server/controller"
+	"scs-auth-service/server/middleware"
+
+	_ "scs-auth-service/docs/swagger" // for swagger docs
+)
+
+func LoadRoutes(
+	r *gin.Engine,
+	cfg *config.Config,
+	clientCredMW *middleware.ClientCredential,
+	authMW *middleware.Auth,
+	authCtrl *controller.Auth,
+	userCtrl *controller.User,
+) {
+	rMeta := r.Group("")
+	rMeta.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+	if !cfg.Production {
+		rMeta.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
+
+	authGroup := r.Group("/auth")
+	authGroup.Use(clientCredMW.Handle)
+	loadAuthRoutes(authGroup, authCtrl)
+
+	userGroup := r.Group("/user/:id")
+	userGroup.Use(authMW.Handle)
+	loadUserRoutes(userGroup, userCtrl)
+}
+
+func loadAuthRoutes(
+	rg *gin.RouterGroup,
+	authCtrl *controller.Auth,
+) {
+	rg.POST("/register", authCtrl.Register)
+	rg.POST("/login", authCtrl.Login)
+	rg.POST("/zalo", authCtrl.AuthZalo)
+	rg.POST("/firebase", authCtrl.AuthFirebase)
+	rg.POST("/refresh-token", authCtrl.RefreshToken)
+	rg.POST("/logout", authCtrl.Logout)
+}
+
+func loadUserRoutes(
+	rg *gin.RouterGroup,
+	userCtrl *controller.User,
+) {
+	rg.PUT("", userCtrl.UpdateProfile)
+	rg.GET("", userCtrl.GetProfile)
+	rg.PUT("/password", userCtrl.ChangePassword)
+}

@@ -1,0 +1,25 @@
+http:
+  port: 8080
+
+database:
+  postgres:
+    auth:
+      host: "localhost"
+      port: 5432
+      user: "postgres"
+      password: "password"
+      dbname: "scs_auth"
+      sslmode: "disable"
+      timezone: "UTC"
+
+secrets:
+  jwt-issuer: "scs-game-services"
+  jwt-secret-key: "your-jwt-secret-key"
+  access-token-expiry: 1h
+  refresh-token-expiry: 168h # 7 days
+
+  client-credentials:
+    game-client:
+      client: "Game Client"
+      client-id: "game-client-id"
+      client-secret: "game-client-secret"
