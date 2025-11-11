@@ -1,0 +1,40 @@
+name: ci_commitlint
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  commitlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-npm-${{ hashFiles('.github/workflows/ci_commitlint.yaml') }}
+          restore-keys: ${{ runner.os }}-node-npm-*
+      - run: npm install -g @commitlint/{cli,config-conventional}
+      - run: |
+          git --version
+          node --version
+          npm --version
+          commitlint --version
+
+      - name: Create commitlint config
+        run: |
+          echo "module.exports = { extends: ['@commitlint/config-conventional'] };" > commitlint.config.js
+
+      - name: Validate current commit (last commit) with commitlint
+        if: github.event_name == 'push'
+        run: commitlint --last --verbose
+
+      - name: Validate PR commits with commitlint
+        if: github.event_name == 'pull_request'
+        run: commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
