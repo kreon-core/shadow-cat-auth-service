@@ -18,9 +18,10 @@ type AccessClaims struct {
 type RefreshClaims struct {
 	jwt.RegisteredClaims
 
-	UserID string `json:"user_id"`
-	Role   string `json:"role"`
-	Token  string `json:"token"`
+	UserID   string `json:"user_id"`
+	PlayerID string `json:"player_id"`
+	Role     string `json:"role"`
+	Token    string `json:"token"`
 }
 
 const (
@@ -60,14 +61,15 @@ func ParseJWTAccessToken(tokenString string, jwtSecretKey []byte) (*jwt.Token, *
 	return token, claims, err
 }
 
-func GenerateJWTRefreshToken(userID, role string,
+func GenerateJWTRefreshToken(userID, playerID, role string,
 	issuer string, jwtSecretKey []byte, tokenExpiry time.Duration,
 ) (string, string, error) {
 	tokenID := uuid.NewString()
 	claims := &RefreshClaims{
-		UserID: userID,
-		Role:   role,
-		Token:  tokenID,
+		UserID:   userID,
+		PlayerID: playerID,
+		Role:     role,
+		Token:    tokenID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: issuer,
 			ID:     tokenID,

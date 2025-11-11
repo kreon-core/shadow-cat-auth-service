@@ -29,6 +29,7 @@ const (
 	EInvalidRefreshToken
 	EAccessDenied
 	EAccountSuspended
+	EJWTGenerationFailed
 )
 
 const (
