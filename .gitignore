@@ -1,0 +1,12 @@
+.idea/**
+
+.vscode/**
+!.vscode/launch.json
+!.vscode/extensions.json
+
+.DS_Store
+Thumbs.db
+__debug_*
+*.tmp.*
+
+.env
