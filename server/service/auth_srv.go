@@ -409,11 +409,11 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 	return authRefreshData, helpers.Success, nil
 }
 
-func (srv *Auth) Logout(ctx context.Context, req *request.LogoutReq) (int, error) {
+func (srv *Auth) Logout(ctx context.Context, userID string, req *request.LogoutReq) (int, error) {
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
-		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, req.UserID)
+		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, userID)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("fetch_user -> %w", txErr)

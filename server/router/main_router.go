@@ -40,7 +40,7 @@ func LoadRoutes(
 
 	userGroup := rv1.Group("/user/:id")
 	userGroup.Use(authMW.Handle)
-	loadUserRoutes(userGroup, userCtrl)
+	loadUserRoutes(userGroup, authCtrl, userCtrl)
 }
 
 func loadAuthRoutes(
@@ -52,14 +52,15 @@ func loadAuthRoutes(
 	rg.POST("/zalo", authCtrl.AuthZalo)
 	rg.POST("/firebase", authCtrl.AuthFirebase)
 	rg.POST("/refresh", authCtrl.AuthRefresh)
-	rg.POST("/logout", authCtrl.Logout)
 }
 
 func loadUserRoutes(
 	rg *gin.RouterGroup,
+	authCtrl *controller.Auth,
 	userCtrl *controller.User,
 ) {
 	rg.PUT("", userCtrl.UpdateProfile)
 	rg.GET("", userCtrl.GetProfile)
 	rg.PUT("/password", userCtrl.ChangePassword)
+	rg.POST("/logout", authCtrl.Logout)
 }

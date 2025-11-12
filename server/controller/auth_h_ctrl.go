@@ -189,6 +189,17 @@ func (ctrl *Auth) AuthRefresh(c *gin.Context) {
 }
 
 func (ctrl *Auth) Logout(c *gin.Context) {
+	userID := c.Param("id")
+	if helpers.IsBlankString(&userID) {
+		clog.Log().Warn("Auth.Logout - missing user ID in path",
+			zap.String("user_id", userID))
+		c.JSON(http.StatusBadRequest, &response.Resp{
+			ReturnCode:    helpers.EInvalidRequest,
+			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
+		})
+		return
+	}
+
 	var req request.LogoutReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		clog.Log().Warn("Auth.Logout - invalid request",
@@ -200,7 +211,7 @@ func (ctrl *Auth) Logout(c *gin.Context) {
 		return
 	}
 
-	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), &req)
+	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), userID, &req)
 	if err != nil {
 		if eCode == helpers.EDatabaseError {
 			clog.Log().Error("Auth.Logout - service error",
