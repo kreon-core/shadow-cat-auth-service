@@ -14,45 +14,78 @@ import (
 	"scs-auth-service/models/dto"
 	"scs-auth-service/models/entity"
 	"scs-auth-service/models/request"
+	"scs-auth-service/server/repository"
 )
 
 type Auth struct {
-	Config *config.Config
-	AuthDB *gorm.DB
+	Config   *config.Config
+	AuthRepo *repository.Auth
 }
 
-func NewAuthService(cfg *config.Config, authDB *gorm.DB) *Auth {
+func NewAuthService(cfg *config.Config, authRepo *repository.Auth) *Auth {
 	return &Auth{
-		Config: cfg,
-		AuthDB: authDB,
+		Config:   cfg,
+		AuthRepo: authRepo,
 	}
 }
 
-func (srv *Auth) Register(ctx context.Context, db *gorm.DB, req *request.RegisterReq) (*dto.AuthData, int, error) {
-	if db == nil {
-		db = srv.AuthDB
-	}
-
+func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.AuthData, int, error) {
 	var authData dto.AuthData
 	eCode := helpers.EDatabaseError
-	err := db.Transaction(func(tx *gorm.DB) error {
-		tx = tx.WithContext(ctx)
 
+	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
+		passwordHash, err := helpers.HashUsingBcrypt(req.Password)
+		if err != nil {
+			eCode = helpers.EInvalidRequest
+			return fmt.Errorf("hash password -> %w", err)
+		}
 		user := entity.User{
 			Username:     req.Username,
 			Email:        req.Email,
-			PasswordHash: fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password))),
-			DisplayName:  req.DisplayName,
-			AvatarURL:    req.AvatarURL,
-			Status:       "active",
+			PasswordHash: passwordHash,
+			DisplayName:  helpers.OrDefault(req.DisplayName, req.Username),
+			AvatarURL: helpers.OrDefault(
+				req.AvatarURL,
+				fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", req.Username),
+			),
+			Status: "active",
 		}
-		txErr := tx.Create(&user).Error
+		txErr := srv.AuthRepo.CreateUser(ctx, tx, &user)
 		if txErr != nil {
-			if errors.Is(txErr, gorm.ErrDuplicatedKey) {
-				eCode = helpers.EUserAlreadyExists
-				return fmt.Errorf("user already exists -> %w", txErr)
-			}
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("create user -> %w", txErr)
+		}
+
+		jwtIssuer := srv.Config.Secrets.JWTIssuer
+		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
+		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.AccessTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate jwt access token -> %w", txErr)
+		}
+		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.RefreshTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate jwt refresh token -> %w", txErr)
+		}
+		userSession := entity.UserSession{
+			UserID:    user.ID,
+			Token:     token,
+			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
+			// DeviceInfo & IP Address
+		}
+		txErr = srv.AuthRepo.CreateUserSession(ctx, tx, &userSession)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("create user session -> %w", txErr)
 		}
 
 		authData.UserID = user.ID.String()
@@ -63,49 +96,10 @@ func (srv *Auth) Register(ctx context.Context, db *gorm.DB, req *request.Registe
 		authData.AvatarURL = user.AvatarURL
 		authData.Status = user.Status
 		authData.PlayerID = user.PlayerID.String()
-
-		jwtIssuer := srv.Config.Secrets.JWTIssuer
-		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
-
-		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
-			jwtIssuer, jwtSecretKey,
-			srv.Config.Secrets.AccessTokenExpiry,
-		)
-		if txErr != nil {
-			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt access token -> %w", txErr)
-		}
-
-		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
-			jwtIssuer, jwtSecretKey,
-			srv.Config.Secrets.RefreshTokenExpiry,
-		)
-		if txErr != nil {
-			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt refresh token -> %w", txErr)
-		}
-
 		authData.TokenType = "Bearer"
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
 		authData.RefreshToken = jwtRefreshToken
-
-		userSession := entity.UserSession{
-			UserID:    user.ID,
-			Token:     token,
-			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
-			// DeviceInfo & IP Address
-		}
-		txErr = tx.Create(&userSession).Error
-		if txErr != nil {
-			if errors.Is(txErr, gorm.ErrDuplicatedKey) {
-				eCode = helpers.EResourceAlreadyExists
-				return fmt.Errorf("user session already exists -> %w", txErr)
-			}
-			return fmt.Errorf("create user session -> %w", txErr)
-		}
 
 		return nil
 	})
@@ -116,15 +110,9 @@ func (srv *Auth) Register(ctx context.Context, db *gorm.DB, req *request.Registe
 }
 
 func (srv *Auth) Login(ctx context.Context, db *gorm.DB, req *request.LoginReq) (*dto.AuthData, int, error) {
-	if db == nil {
-		db = srv.AuthDB
-	}
-
 	var authData dto.AuthData
 	eCode := helpers.EDatabaseError
-	err := db.Transaction(func(tx *gorm.DB) error {
-		tx = tx.WithContext(ctx)
-
+	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
 		var user entity.User
 		txErr := tx.Where("username = ?", req.Username).First(&user).Error
 		if txErr != nil {
@@ -206,14 +194,8 @@ func (srv *Auth) AuthFirebase() {}
 func (srv *Auth) RefreshToken() {}
 
 func (srv *Auth) Logout(ctx context.Context, db *gorm.DB, req *request.LogoutReq) (int, error) {
-	if db == nil {
-		db = srv.AuthDB
-	}
-
 	eCode := helpers.EDatabaseError
-	err := db.Transaction(func(tx *gorm.DB) error {
-		tx = tx.WithContext(ctx)
-
+	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
 		var user entity.User
 		txErr := tx.Where("id = ?", req.UserID).First(&user).Error
 		if txErr != nil {

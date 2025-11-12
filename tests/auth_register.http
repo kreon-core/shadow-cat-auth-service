@@ -1,0 +1,59 @@
+### Register User
+@rand = {{$randomInt 1000 9999}}
+@username = user{{rand}}
+@email = email{{rand}}@example.com
+POST http://localhost:8080/api/v1/auth/register
+Accept: application/json
+Content-Type: application/json; charset=utf-8
+X-Client-ID: game-client-id
+X-Client-Signature: Client HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
+
+{
+    "username": "{{username}}",
+    "email": "{{email}}",
+    "password": "Passw0rd!",
+    "display_name": "",
+    "avatar_url": ""
+}
+
+# Expected Response 201 -- Created
+# {
+#     "return_code": 3,
+#     "return_message": "Resource created successfully",
+#     "data": {
+#         "user_id": "<user-uuid>",
+#         "username": "<username>",
+#         "email": "<email>",
+
+#         "display_name": "<display-name>",
+#         "avatar_url": "<avatar-url>",
+#         "status": "<user-status>",
+
+#         "player_id": "<player-uuid>",
+
+#         "token_type": "Bearer",
+#         "access_token": "<jwt-access-token>",
+#         "expires_in": <access-token-expiry-in-seconds>,
+#         "refresh_token": "<jwt-refresh-token>"
+#     }
+# }
+
+# Expected Response 401 -- Unauthorized
+# {
+#     "return_code": -100,
+#     "return_message": "Invalid signature"
+# }
+
+# Expected Response 400 -- Bad Request
+# {
+#     "return_code": -2,
+#     "return_message": "Invalid request"
+# }
+
+# Expected Response 409 -- Conflict
+# {
+#     "return_code": -402,
+#     "return_message": "Resource already exists"
+# }
+
+# ++ TODO: prevent register scripts from having bunch of ghost users

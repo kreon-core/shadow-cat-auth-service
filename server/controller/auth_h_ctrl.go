@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
+	"go.uber.org/zap"
 
 	"scs-auth-service/config"
 	"scs-auth-service/helpers"
 	"scs-auth-service/models/request"
 	"scs-auth-service/models/response"
+	"scs-auth-service/o11y/clog"
 	"scs-auth-service/server/service"
 )
 
@@ -18,16 +19,18 @@ type Auth struct {
 	AuthSrv *service.Auth
 }
 
-func NewAuthController(cfg *config.Config, authDB *gorm.DB) *Auth {
+func NewAuthController(cfg *config.Config, authSrv *service.Auth) *Auth {
 	return &Auth{
 		Config:  cfg,
-		AuthSrv: service.NewAuthService(cfg, authDB),
+		AuthSrv: authSrv,
 	}
 }
 
 func (ctrl *Auth) Register(c *gin.Context) {
 	var req request.RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		clog.Log().Warn("Auth.Register - invalid request",
+			zap.Any("request", &req), zap.Error(err))
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    helpers.EInvalidRequest,
 			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
@@ -35,8 +38,15 @@ func (ctrl *Auth) Register(c *gin.Context) {
 		return
 	}
 
-	authData, eCode, err := ctrl.AuthSrv.Register(c.Request.Context(), nil, &req)
+	authData, eCode, err := ctrl.AuthSrv.Register(c.Request.Context(), &req)
 	if err != nil {
+		if eCode == helpers.EDatabaseError {
+			clog.Log().Error("Auth.Register - service error",
+				zap.Any("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		} else {
+			clog.Log().Warn("Auth.Register - service error",
+				zap.Any("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		}
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    eCode,
 			ReturnMessage: helpers.Message(eCode),
@@ -44,9 +54,11 @@ func (ctrl *Auth) Register(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, &response.Resp{
-		ReturnCode:    helpers.Success,
-		ReturnMessage: helpers.Message(helpers.Success),
+	clog.Log().Info("Auth.Register - user registered successfully",
+		zap.String("user_id", authData.UserID))
+	c.JSON(http.StatusCreated, &response.Resp{
+		ReturnCode:    helpers.SResourceCreatedSuccessfully,
+		ReturnMessage: helpers.Message(helpers.SResourceCreatedSuccessfully),
 		Data:          authData,
 	})
 }

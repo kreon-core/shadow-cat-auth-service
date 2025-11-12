@@ -19,4 +19,7 @@ type UserSession struct {
 
 	DeviceInfo datatypes.JSON `gorm:"type:jsonb"`
 	IPAddress  string         `gorm:"type:varchar(45)"`
+
+	// Associations
+	User User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`
 }

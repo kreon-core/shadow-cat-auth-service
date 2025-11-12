@@ -22,6 +22,8 @@ func LoadRoutes(
 	authCtrl *controller.Auth,
 	userCtrl *controller.User,
 ) {
+	r.Use(middleware.CatchGlobalHTTPError)
+
 	rMeta := r.Group("")
 	rMeta.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
@@ -30,11 +32,13 @@ func LoadRoutes(
 		rMeta.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	authGroup := r.Group("/auth")
+	rv1 := r.Group("/api/v1")
+
+	authGroup := rv1.Group("/auth")
 	authGroup.Use(clientCredMW.Handle)
 	loadAuthRoutes(authGroup, authCtrl)
 
-	userGroup := r.Group("/user/:id")
+	userGroup := rv1.Group("/user/:id")
 	userGroup.Use(authMW.Handle)
 	loadUserRoutes(userGroup, userCtrl)
 }

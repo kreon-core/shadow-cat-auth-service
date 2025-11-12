@@ -11,8 +11,8 @@ const (
 )
 
 const (
-	Ignored          = 0
-	UnspecifiedError = -1
+	UIgnored          = 0
+	UUnspecifiedError = -1
 )
 
 const (
@@ -46,11 +46,17 @@ const (
 )
 
 const (
-	EResourceNotFound = -400 - iota
+	EDatabaseError = -400 - iota
+	EResourceNotFound
 	EResourceAlreadyExists
-	EDatabaseError
-	EDataIntegrityViolation
 	ERecordNotAllowedToModify
+	EDBNotNullViolation
+	EDBCheckViolation
+	EDBDataIntegrityViolation
+	EDBInvalidDatetimeFormat
+	EDBNumericValueOutOfRange
+	EDBStringLengthExceeded
+	EDBInvalidTextRepresentation
 )
 
 const (
@@ -59,7 +65,7 @@ const (
 	EThirdPartyServiceUnavailable
 )
 
-var Messages = map[int]string{ //nolint:gochecknoglobals // global map of code-message pairs
+var messages = map[int]string{ //nolint:gochecknoglobals // global map of code-message pairs
 	Success:                      "Success",
 	SRequestAccepted:             "Request accepted",
 	SResourceCreatedSuccessfully: "Resource created successfully",
@@ -87,11 +93,17 @@ var Messages = map[int]string{ //nolint:gochecknoglobals // global map of code-m
 	ENotEnoughGems:  "Not enough gems",
 	EEnergyDepleted: "Energy depleted",
 
-	EResourceNotFound:         "Resource not found",
-	EResourceAlreadyExists:    "Resource already exists",
-	EDatabaseError:            "Database error",
-	EDataIntegrityViolation:   "Data integrity violation",
-	ERecordNotAllowedToModify: "Record not allowed to modify",
+	EDatabaseError:               "Database error",
+	EResourceNotFound:            "Resource not found",
+	EResourceAlreadyExists:       "Resource already exists",
+	ERecordNotAllowedToModify:    "Record not allowed to modify",
+	EDBNotNullViolation:          "Not-null violation",
+	EDBCheckViolation:            "Check violation",
+	EDBDataIntegrityViolation:    "Data integrity violation",
+	EDBInvalidDatetimeFormat:     "Invalid datetime format",
+	EDBNumericValueOutOfRange:    "Numeric value out of range",
+	EDBStringLengthExceeded:      "String length exceeded",
+	EDBInvalidTextRepresentation: "Invalid text representation",
 
 	EExternalServiceError:         "External service error",
 	EExternalServiceTimeout:       "External service timeout",
@@ -99,7 +111,7 @@ var Messages = map[int]string{ //nolint:gochecknoglobals // global map of code-m
 }
 
 func Message(code int) string {
-	if msg, ok := Messages[code]; ok {
+	if msg, ok := messages[code]; ok {
 		return msg
 	}
 	return "Unknown code"
