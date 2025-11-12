@@ -28,6 +28,7 @@ func CreatePostgresConnection(gormOptions *config.GormOptions, cfg *config.Postg
 		cfg.Port, cfg.SSLMode, cfg.TimeZone,
 	)
 	pgCfg := postgres.Config{
+		DriverName:       "pgx",
 		DSN:              dsn,
 		WithoutReturning: helpers.OrDefault(cfg.WithoutReturning, false),
 	}
