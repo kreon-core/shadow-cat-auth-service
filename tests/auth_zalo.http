@@ -1,0 +1,82 @@
+###
+POST http://localhost:8080/api/v1/auth/zalo
+Accept: application/json
+Content-Type: application/json
+X-Client-ID: <client-id>
+X-Client-Signature: Client <signature_provided_by_server>
+
+{
+    // Forwarded from client SDK
+    "channel": "<zalo-channel>(h5zl||inapp)",
+    "uid": "<zalo-uid>",
+    "timestamp": "<zalo-timestamp>",
+    "utm_campaign": "<zalo-utm-campaign>",
+    "utm_medium": "<zalo-utm-medium>",
+    "utm_source": "<zalo-utm-source>",
+    "sign": "<zalo-signature>",
+
+    // Extra info from client SDK (optional)
+    "display_name": "<zalo-user-display-name>(optional)",
+    "avatar_url": "<zalo-user-avatar-url>(optional)",
+}
+
+# # Expected Response 200 -- OK
+# {
+#     "return_code": 1,
+#     "return_message": "Success",
+#     "data": {
+#         "user_id": "<user-uuid>",
+#         "display_name": "<display-name>",
+#         "avatar_url": "<avatar-url>",
+#         "status": "<user-status>",
+
+#         "provider": {
+#             "name": "zalo",
+#             "uid": "<zalo-uid>",
+#             "linked_at": "<linked-timestamp-with-timezone>",
+#             "metadata": {
+#                 "channel": "<zalo-channel>",
+#                 "utm_campaign": "<zalo-utm-campaign>",
+#                 "utm_medium": "<zalo-utm-medium>",
+#                 "utm_source": "<zalo-utm-source>"
+#                 // extra metadata if any
+#             }
+#         },
+
+#         "player_id": "<player-uuid>",
+
+#         "token_type": "Bearer",
+#         "access_token": "<jwt-access-token>",
+#         "expires_in": <access-token-expiry-in-seconds>,
+#         "refresh_token": "<jwt-refresh-token>"
+#     }
+# }
+
+# # Expected Response 401 -- Unauthorized
+# {
+#     "return_code": -100,
+#     "return_message": "Signature / Credentials invalid"
+# }
+
+# # Expected Response 400 -- Bad Request
+# {
+#     "return_code": -2,
+#     "return_message": "Invalid request"
+# }
+
+# {
+#     "return_code": -90,
+#     "return_message": "Zalo signature does not match with provided data"
+# }
+
+# # Expected Response 404 -- Not Found
+# {
+#     "return_code": -106,
+#     "return_message": "Account suspended / banned"
+# }
+
+# # Expected Response 429 -- Too Many Requests
+# {
+#     "return_code": -203,
+#     "return_message": "Too many login attempts"
+# }
