@@ -16,7 +16,6 @@ var (
 
 func LoadZap() {
 	var err error
-	var baseLogger *zap.Logger
 
 	cfg := zap.Config{
 		Level:            zap.NewAtomicLevelAt(zap.InfoLevel),
@@ -42,7 +41,7 @@ func LoadZap() {
 		cfg.Encoding = "console"
 		cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	}
-	baseLogger, err = cfg.Build(zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
+	baseLogger, err := cfg.Build(zap.AddCaller(), zap.AddStacktrace(zap.ErrorLevel))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize zap logger: %v", err))
 	}

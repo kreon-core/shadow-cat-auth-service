@@ -59,7 +59,7 @@ func (m *ClientCredential) Handle(c *gin.Context) {
 func (m *ClientCredential) validateClient(clientID, signature string) (string, bool) {
 	for name, cred := range m.Config.Secrets.ClientCredentials {
 		if cred != nil && cred.ClientID == clientID {
-			if signature == helpers.ToClientCredSignature(cred.ClientID, cred.ClientSecret) {
+			if signature == helpers.EncodeClientSignature(cred.ClientID, cred.ClientSecret) {
 				return name, true
 			}
 		}

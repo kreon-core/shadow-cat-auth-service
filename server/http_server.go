@@ -17,7 +17,9 @@ import (
 	"scs-auth-service/o11y/clog"
 	"scs-auth-service/server/controller"
 	"scs-auth-service/server/middleware"
+	"scs-auth-service/server/repository"
 	"scs-auth-service/server/router"
+	"scs-auth-service/server/service"
 )
 
 const (
@@ -62,7 +64,11 @@ func NewHTTPServer(
 	clientCredMW := middleware.NewClientCredentialMiddleware(cfg)
 	authMW := middleware.NewAuthMiddleware(cfg)
 
-	authCtrl := controller.NewAuthController(cfg, pgDBs[database.AuthDB])
+	authRepo := repository.NewAuthRepository(cfg, pgDBs[database.AuthDB])
+
+	authSrv := service.NewAuthService(cfg, authRepo)
+
+	authCtrl := controller.NewAuthController(cfg, authSrv)
 	userCtrl := controller.NewUserController()
 
 	r := gin.Default()

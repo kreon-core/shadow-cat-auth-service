@@ -1,4 +1,4 @@
-package loaders
+package loader
 
 import "github.com/joho/godotenv"
 

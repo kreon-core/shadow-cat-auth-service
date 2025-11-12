@@ -9,7 +9,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"scs-auth-service/config/loaders"
+	"scs-auth-service/config/loader"
 	"scs-auth-service/o11y/clog"
 	"scs-auth-service/server"
 )
@@ -22,12 +22,12 @@ func main() {
 		}
 	}()
 
-	loaders.LoadEnv()
+	loader.LoadEnv()
 
 	clog.LoadZap()
 	defer clog.CloseZap()
 
-	cfg, err := loaders.LoadConfig()
+	cfg, err := loader.LoadConfig()
 	if err != nil {
 		clog.Log().Fatal("Failed to load configuration", zap.Error(err))
 	}
