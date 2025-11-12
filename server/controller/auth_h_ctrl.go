@@ -67,6 +67,8 @@ func (ctrl *Auth) Register(c *gin.Context) {
 func (ctrl *Auth) Login(c *gin.Context) {
 	var req request.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		clog.Log().Warn("Auth.Login - invalid request",
+			clog.SafeAny("request", &req), zap.Error(err))
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    helpers.EInvalidRequest,
 			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
@@ -74,8 +76,15 @@ func (ctrl *Auth) Login(c *gin.Context) {
 		return
 	}
 
-	authData, eCode, err := ctrl.AuthSrv.Login(c.Request.Context(), nil, &req)
+	authData, eCode, err := ctrl.AuthSrv.Login(c.Request.Context(), &req)
 	if err != nil {
+		if eCode == helpers.EDatabaseError {
+			clog.Log().Error("Auth.Login - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		} else {
+			clog.Log().Warn("Auth.Login - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		}
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    eCode,
 			ReturnMessage: helpers.Message(eCode),
@@ -83,6 +92,9 @@ func (ctrl *Auth) Login(c *gin.Context) {
 		return
 	}
 
+	clog.Log().Info("Auth.Login - user logged in successfully",
+		clog.SafeAny("request", &req),
+		zap.String("user_id", authData.UserID))
 	c.JSON(http.StatusOK, &response.Resp{
 		ReturnCode:    helpers.Success,
 		ReturnMessage: helpers.Message(helpers.Success),
@@ -97,6 +109,8 @@ func (ctrl *Auth) RefreshToken(c *gin.Context) {}
 func (ctrl *Auth) Logout(c *gin.Context) {
 	var req request.LogoutReq
 	if err := c.ShouldBindJSON(&req); err != nil {
+		clog.Log().Warn("Auth.Logout - invalid request",
+			clog.SafeAny("request", &req), zap.Error(err))
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    helpers.EInvalidRequest,
 			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
@@ -104,8 +118,15 @@ func (ctrl *Auth) Logout(c *gin.Context) {
 		return
 	}
 
-	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), nil, &req)
+	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), &req)
 	if err != nil {
+		if eCode == helpers.EDatabaseError {
+			clog.Log().Error("Auth.Logout - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		} else {
+			clog.Log().Warn("Auth.Logout - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		}
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    eCode,
 			ReturnMessage: helpers.Message(eCode),
@@ -113,6 +134,8 @@ func (ctrl *Auth) Logout(c *gin.Context) {
 		return
 	}
 
+	clog.Log().Info("Auth.Logout - user logged out successfully",
+		clog.SafeAny("request", &req))
 	c.JSON(http.StatusOK, &response.Resp{
 		ReturnCode:    helpers.Success,
 		ReturnMessage: helpers.Message(helpers.Success),

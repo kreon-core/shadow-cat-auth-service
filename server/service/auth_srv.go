@@ -2,11 +2,11 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
 	"errors"
 	"fmt"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"gorm.io/gorm"
 
 	"scs-auth-service/config"
@@ -37,7 +37,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		passwordHash, err := helpers.HashUsingBcrypt(req.Password)
 		if err != nil {
 			eCode = helpers.EInvalidRequest
-			return fmt.Errorf("hash password -> %w", err)
+			return fmt.Errorf("hash_password -> %w", err)
 		}
 		user := entity.User{
 			Username:     req.Username,
@@ -50,10 +50,10 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			),
 			Status: "active",
 		}
-		txErr := srv.AuthRepo.CreateUser(ctx, tx, &user)
+		txErr := srv.AuthRepo.CUser(ctx, tx, &user)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
-			return fmt.Errorf("create user -> %w", txErr)
+			return fmt.Errorf("create_user -> %w", txErr)
 		}
 
 		jwtIssuer := srv.Config.Secrets.JWTIssuer
@@ -65,7 +65,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		)
 		if txErr != nil {
 			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt access token -> %w", txErr)
+			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
 		}
 		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
 			user.ID.String(), user.PlayerID.String(), user.Role,
@@ -74,7 +74,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		)
 		if txErr != nil {
 			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt refresh token -> %w", txErr)
+			return fmt.Errorf("generate_jwt_refresh_token -> %w", txErr)
 		}
 		userSession := entity.UserSession{
 			UserID:    user.ID,
@@ -82,10 +82,10 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
-		txErr = srv.AuthRepo.CreateUserSession(ctx, tx, &userSession)
+		txErr = srv.AuthRepo.CUserSession(ctx, tx, &userSession)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
-			return fmt.Errorf("create user session -> %w", txErr)
+			return fmt.Errorf("create_user_session -> %w", txErr)
 		}
 
 		authData.UserID = user.ID.String()
@@ -109,24 +109,57 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 	return &authData, helpers.Success, nil
 }
 
-func (srv *Auth) Login(ctx context.Context, db *gorm.DB, req *request.LoginReq) (*dto.AuthData, int, error) {
+func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthData, int, error) {
 	var authData dto.AuthData
 	eCode := helpers.EDatabaseError
+
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
-		var user entity.User
-		txErr := tx.Where("username = ?", req.Username).First(&user).Error
+		user, txErr := srv.AuthRepo.RUserWUsername(ctx, tx, req.Username)
 		if txErr != nil {
-			if errors.Is(txErr, gorm.ErrRecordNotFound) {
-				eCode = helpers.EUserNotFound
-				return errors.New("invalid credentials")
-			}
-			return fmt.Errorf("fetch user -> %w", txErr)
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("fetch_user -> %w", txErr)
 		}
 
-		passwordHash := fmt.Sprintf("%x", sha256.Sum256([]byte(req.Password)))
-		if user.PasswordHash != passwordHash {
+		if user.Status != "active" {
+			eCode = helpers.EAccountSuspended
+			return errors.New("user_inactive")
+		}
+
+		if helpers.VerifyBcryptHash(user.PasswordHash, req.Password) {
 			eCode = helpers.EAccessDenied
-			return errors.New("invalid credentials")
+			return errors.New("invalid_credentials")
+		}
+
+		jwtIssuer := srv.Config.Secrets.JWTIssuer
+		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
+		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.AccessTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
+		}
+		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.RefreshTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate_jwt_refresh_token -> %w", txErr)
+		}
+		userSession := entity.UserSession{
+			UserID:    user.ID,
+			Token:     token,
+			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
+			// DeviceInfo & IP Address
+		}
+		txErr = srv.AuthRepo.CUserSession(ctx, tx, &userSession)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("create_user_session -> %w", txErr)
 		}
 
 		authData.UserID = user.ID.String()
@@ -137,49 +170,10 @@ func (srv *Auth) Login(ctx context.Context, db *gorm.DB, req *request.LoginReq) 
 		authData.AvatarURL = user.AvatarURL
 		authData.Status = user.Status
 		authData.PlayerID = user.PlayerID.String()
-
-		jwtIssuer := srv.Config.Secrets.JWTIssuer
-		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
-
-		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
-			jwtIssuer, jwtSecretKey,
-			srv.Config.Secrets.AccessTokenExpiry,
-		)
-		if txErr != nil {
-			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt access token -> %w", txErr)
-		}
-
-		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
-			jwtIssuer, jwtSecretKey,
-			srv.Config.Secrets.RefreshTokenExpiry,
-		)
-		if txErr != nil {
-			eCode = helpers.EJWTGenerationFailed
-			return fmt.Errorf("generate jwt refresh token -> %w", txErr)
-		}
-
 		authData.TokenType = "Bearer"
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
 		authData.RefreshToken = jwtRefreshToken
-
-		userSession := entity.UserSession{
-			UserID:    user.ID,
-			Token:     token,
-			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
-			// DeviceInfo & IP Address
-		}
-		txErr = tx.Create(&userSession).Error
-		if txErr != nil {
-			if errors.Is(txErr, gorm.ErrDuplicatedKey) {
-				eCode = helpers.EResourceAlreadyExists
-				return fmt.Errorf("user session already exists -> %w", txErr)
-			}
-			return fmt.Errorf("create user session -> %w", txErr)
-		}
 
 		return nil
 	})
@@ -193,23 +187,37 @@ func (srv *Auth) AuthZalo()     {}
 func (srv *Auth) AuthFirebase() {}
 func (srv *Auth) RefreshToken() {}
 
-func (srv *Auth) Logout(ctx context.Context, db *gorm.DB, req *request.LogoutReq) (int, error) {
+func (srv *Auth) Logout(ctx context.Context, req *request.LogoutReq) (int, error) {
 	eCode := helpers.EDatabaseError
+
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
-		var user entity.User
-		txErr := tx.Where("id = ?", req.UserID).First(&user).Error
+		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, req.UserID)
 		if txErr != nil {
-			eCode = helpers.EUserNotFound
-			return fmt.Errorf("fetch user -> %w", txErr)
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("fetch_user -> %w", txErr)
 		}
 
-		txErr = tx.Model(&entity.UserSession{}).
-			Where("user_id = ? AND token = ? AND revoked = false",
-				user.ID, req.RefreshToken).
-			Update("revoked", true).Error
+		token, claims, txErr := helpers.ParseJWTRefreshToken(req.RefreshToken, []byte(srv.Config.Secrets.JWTSecretKey))
 		if txErr != nil {
-			eCode = helpers.EResourceNotFound
-			return fmt.Errorf("revoke user session -> %w", txErr)
+			if !errors.Is(txErr, jwt.ErrTokenExpired) {
+				eCode = helpers.EInvalidRefreshToken
+				return fmt.Errorf("parse_jwt_refresh_token -> %w", txErr)
+			}
+		}
+		if !token.Valid {
+			eCode = helpers.EInvalidRefreshToken
+			return errors.New("invalid_jwt_refresh_token")
+		}
+
+		if claims.UserID != user.ID.String() {
+			eCode = helpers.EInvalidRefreshToken
+			return errors.New("token_user_mismatch")
+		}
+
+		txErr = srv.AuthRepo.UUserSessionFuncRevokeSession(ctx, tx, user.ID, claims.Token)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("revoke_user_session -> %w", txErr)
 		}
 
 		return nil

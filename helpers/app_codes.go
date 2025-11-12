@@ -28,14 +28,12 @@ const (
 	EExpiredAccessToken
 	EInvalidRefreshToken
 	EAccessDenied
-	EAccountSuspended
 	EJWTGenerationFailed
 )
 
 const (
-	EUserNotFound = -200 - iota
-	EUserAlreadyExists
-	EUsernameTaken
+	EAccountSuspended = -200 - iota
+	EAccountSessionRevoked
 	ETooManyLoginAttempts
 )
 
@@ -82,11 +80,8 @@ var messages = map[int]string{ //nolint:gochecknoglobals // global map of code-m
 	EExpiredAccessToken:         "Expired access token",
 	EInvalidRefreshToken:        "Invalid refresh token",
 	EAccessDenied:               "Access denied",
-	EAccountSuspended:           "Account suspended",
 
-	EUserNotFound:         "User not found",
-	EUserAlreadyExists:    "User already exists",
-	EUsernameTaken:        "Username is already taken",
+	EAccountSuspended:     "Account suspended",
 	ETooManyLoginAttempts: "Too many login attempts",
 
 	ENotEnoughCoins: "Not enough coins",
