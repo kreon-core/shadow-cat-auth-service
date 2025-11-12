@@ -27,6 +27,7 @@ const (
 	EInvalidAccessToken
 	EExpiredAccessToken
 	EInvalidRefreshToken
+	EExpiredRefreshToken
 	EAccessDenied
 	EJWTGenerationFailed
 )
@@ -79,6 +80,7 @@ var messages = map[int]string{ //nolint:gochecknoglobals // global map of code-m
 	EInvalidAccessToken:         "Invalid access token",
 	EExpiredAccessToken:         "Expired access token",
 	EInvalidRefreshToken:        "Invalid refresh token",
+	EExpiredRefreshToken:        "Expired refresh token",
 	EAccessDenied:               "Access denied",
 
 	EAccountSuspended:     "Account suspended",

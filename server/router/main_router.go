@@ -51,7 +51,7 @@ func loadAuthRoutes(
 	rg.POST("/login", authCtrl.Login)
 	rg.POST("/zalo", authCtrl.AuthZalo)
 	rg.POST("/firebase", authCtrl.AuthFirebase)
-	rg.POST("/refresh-token", authCtrl.RefreshToken)
+	rg.POST("/refresh", authCtrl.AuthRefresh)
 	rg.POST("/logout", authCtrl.Logout)
 }
 

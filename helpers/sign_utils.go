@@ -1,7 +1,7 @@
 package helpers
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec // follows Zalo's requirement
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"

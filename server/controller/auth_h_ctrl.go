@@ -150,7 +150,43 @@ func (ctrl *Auth) AuthZalo(c *gin.Context) {
 }
 
 func (ctrl *Auth) AuthFirebase(c *gin.Context) {}
-func (ctrl *Auth) RefreshToken(c *gin.Context) {}
+
+func (ctrl *Auth) AuthRefresh(c *gin.Context) {
+	var req request.AuthRefreshReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		clog.Log().Warn("Auth.AuthRefresh - invalid request",
+			clog.SafeAny("request", &req), zap.Error(err))
+		c.JSON(http.StatusBadRequest, &response.Resp{
+			ReturnCode:    helpers.EInvalidRequest,
+			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
+		})
+		return
+	}
+
+	authRefreshData, eCode, err := ctrl.AuthSrv.AuthRefresh(c.Request.Context(), &req)
+	if err != nil {
+		if eCode == helpers.EDatabaseError {
+			clog.Log().Error("Auth.AuthRefresh - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		} else {
+			clog.Log().Warn("Auth.AuthRefresh - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		}
+		c.JSON(http.StatusBadRequest, &response.Resp{
+			ReturnCode:    eCode,
+			ReturnMessage: helpers.Message(eCode),
+		})
+		return
+	}
+
+	clog.Log().Info("Auth.AuthRefresh - token refreshed successfully",
+		clog.SafeAny("request", &req))
+	c.JSON(http.StatusOK, &response.Resp{
+		ReturnCode:    helpers.Success,
+		ReturnMessage: helpers.Message(helpers.Success),
+		Data:          authRefreshData,
+	})
+}
 
 func (ctrl *Auth) Logout(c *gin.Context) {
 	var req request.LogoutReq

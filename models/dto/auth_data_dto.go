@@ -1,6 +1,10 @@
 package dto
 
-import "time"
+import (
+	"time"
+
+	"scs-auth-service/models/enum"
+)
 
 type AuthData struct {
 	UserID   string `json:"user_id"`
@@ -16,10 +20,10 @@ type AuthData struct {
 
 	PlayerID string `json:"player_id"`
 
-	TokenType    string `json:"token_type"`
-	AccessToken  string `json:"access_token"`
-	ExpiresIn    int64  `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
+	TokenType    enum.TokenType `json:"token_type"`
+	AccessToken  string         `json:"access_token"`
+	ExpiresIn    int64          `json:"expires_in"`
+	RefreshToken string         `json:"refresh_token"`
 }
 
 type AuthProviderData struct {

@@ -15,6 +15,7 @@ import (
 	"scs-auth-service/helpers"
 	"scs-auth-service/models/dto"
 	"scs-auth-service/models/entity"
+	"scs-auth-service/models/enum"
 	"scs-auth-service/models/request"
 	"scs-auth-service/server/repository"
 )
@@ -99,7 +100,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		authData.AvatarURL = user.AvatarURL
 		authData.Status = user.Status
 		authData.PlayerID = user.PlayerID.String()
-		authData.TokenType = "Bearer"
+		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
 		authData.RefreshToken = jwtRefreshToken
@@ -173,7 +174,7 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 		authData.AvatarURL = user.AvatarURL
 		authData.Status = user.Status
 		authData.PlayerID = user.PlayerID.String()
-		authData.TokenType = "Bearer"
+		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
 		authData.RefreshToken = jwtRefreshToken
@@ -199,50 +200,51 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 		if txErr != nil {
 			if errors.Is(txErr, gorm.ErrRecordNotFound) {
 				isNewUser = true
-				user = &entity.User{
-					Username:    fmt.Sprintf("zalo_%s", req.UID),
-					Role:        "player",
-					DisplayName: helpers.OrDefault(req.DisplayName, fmt.Sprintf("ZaloUser_%s", req.UID)),
-					AvatarURL: helpers.OrDefault(
-						req.AvatarURL,
-						fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", req.UID),
-					),
-					Status: "active",
-				}
-				txErr = srv.AuthRepo.CUser(ctx, tx, user)
-				if txErr != nil {
-					eCode = helpers.ConvertPgErrToAppCode(txErr)
-					return fmt.Errorf("create_user -> %w", txErr)
-				}
-
-				var metadata datatypes.JSON
-				metadataMap := map[string]any{
-					"utm_source":   req.UtmSource,
-					"utm_medium":   req.UtmMedium,
-					"utm_campaign": req.UtmCampaign,
-				}
-				metadataJSON, jsonErr := json.Marshal(metadataMap)
-				if jsonErr == nil {
-					metadata = datatypes.JSON(metadataJSON)
-				}
-				authProvider = &entity.AuthProvider{
-					UserID:      user.ID,
-					Provider:    "zalo",
-					ProviderUID: req.UID,
-					LinkedAt:    time.Now(),
-					Metadata:    metadata,
-				}
-				txErr = srv.AuthRepo.CAuthProvider(ctx, tx, authProvider)
-				if txErr != nil {
-					eCode = helpers.ConvertPgErrToAppCode(txErr)
-					return fmt.Errorf("create_auth_provider -> %w", txErr)
-				}
 			} else {
 				eCode = helpers.ConvertPgErrToAppCode(txErr)
 				return fmt.Errorf("fetch_user_by_auth_provider -> %w", txErr)
 			}
 		}
-		if !isNewUser {
+		if isNewUser {
+			user = &entity.User{
+				Username:    fmt.Sprintf("zalo_%s", req.UID),
+				Role:        "player",
+				DisplayName: helpers.OrDefault(req.DisplayName, fmt.Sprintf("ZaloUser_%s", req.UID)),
+				AvatarURL: helpers.OrDefault(
+					req.AvatarURL,
+					fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", req.UID),
+				),
+				Status: "active",
+			}
+			txErr = srv.AuthRepo.CUser(ctx, tx, user)
+			if txErr != nil {
+				eCode = helpers.ConvertPgErrToAppCode(txErr)
+				return fmt.Errorf("create_user -> %w", txErr)
+			}
+
+			var metadata datatypes.JSON
+			metadataMap := map[string]any{
+				"utm_source":   req.UtmSource,
+				"utm_medium":   req.UtmMedium,
+				"utm_campaign": req.UtmCampaign,
+			}
+			metadataJSON, jsonErr := json.Marshal(metadataMap)
+			if jsonErr == nil {
+				metadata = datatypes.JSON(metadataJSON)
+			}
+			authProvider = &entity.AuthProvider{
+				UserID:      user.ID,
+				Provider:    "zalo",
+				ProviderUID: req.UID,
+				LinkedAt:    time.Now(),
+				Metadata:    metadata,
+			}
+			txErr = srv.AuthRepo.CAuthProvider(ctx, tx, authProvider)
+			if txErr != nil {
+				eCode = helpers.ConvertPgErrToAppCode(txErr)
+				return fmt.Errorf("create_auth_provider -> %w", txErr)
+			}
+		} else {
 			user, txErr = srv.AuthRepo.RUserWID(ctx, tx, authProvider.UserID.String())
 			if txErr != nil {
 				eCode = helpers.ConvertPgErrToAppCode(txErr)
@@ -300,7 +302,7 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 			Metadata: authProvider.Metadata,
 		}
 		authData.PlayerID = user.PlayerID.String()
-		authData.TokenType = "Bearer"
+		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
 		authData.RefreshToken = jwtRefreshToken
@@ -314,7 +316,94 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 }
 
 func (srv *Auth) AuthFirebase() {}
-func (srv *Auth) RefreshToken() {}
+
+func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (*dto.AuthRefreshData, int, error) {
+	var authRefreshData *dto.AuthRefreshData
+	eCode := helpers.EDatabaseError
+
+	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
+		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, req.UserID)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("fetch_user -> %w", txErr)
+		}
+
+		token, claims, txErr := helpers.ParseJWTRefreshToken(req.RefreshToken, []byte(srv.Config.Secrets.JWTSecretKey))
+		if txErr != nil {
+			if errors.Is(txErr, jwt.ErrTokenExpired) {
+				eCode = helpers.EExpiredRefreshToken
+			} else {
+				eCode = helpers.EInvalidRefreshToken
+			}
+			return fmt.Errorf("parse_jwt_refresh_token -> %w", txErr)
+		}
+		if !token.Valid {
+			eCode = helpers.EInvalidRefreshToken
+			return errors.New("invalid_jwt_refresh_token")
+		}
+
+		if claims.UserID != user.ID.String() {
+			eCode = helpers.EInvalidRefreshToken
+			return errors.New("token_user_mismatch")
+		}
+
+		userSession, txErr := srv.AuthRepo.RUserSessionWUserIDAndToken(ctx, tx, user.ID, claims.Token)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("fetch_user_session -> %w", txErr)
+		}
+
+		if userSession.Revoked {
+			eCode = helpers.EAccessDenied
+			return errors.New("refresh_token_revoked")
+		}
+
+		if userSession.ExpiresAt.Before(time.Now()) {
+			eCode = helpers.EExpiredRefreshToken
+			return errors.New("refresh_token_expired")
+		}
+
+		jwtIssuer := srv.Config.Secrets.JWTIssuer
+		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
+		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.AccessTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
+		}
+		jwtRefreshToken, newToken, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.PlayerID.String(), user.Role,
+			jwtIssuer, jwtSecretKey,
+			srv.Config.Secrets.RefreshTokenExpiry,
+		)
+		if txErr != nil {
+			eCode = helpers.EJWTGenerationFailed
+			return fmt.Errorf("generate_jwt_refresh_token -> %w", txErr)
+		}
+
+		userSession.Token = newToken
+		userSession.ExpiresAt = time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry)
+		txErr = srv.AuthRepo.UUserSession(ctx, tx, userSession)
+		if txErr != nil {
+			eCode = helpers.ConvertPgErrToAppCode(txErr)
+			return fmt.Errorf("update_user_session -> %w", txErr)
+		}
+
+		authRefreshData.TokenType = enum.TokenTypeBearer
+		authRefreshData.AccessToken = jwtAccessToken
+		authRefreshData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
+		authRefreshData.RefreshToken = jwtRefreshToken
+
+		return nil
+	})
+	if err != nil {
+		return nil, eCode, fmt.Errorf("auth_refresh_transaction -> %w", err)
+	}
+	return authRefreshData, helpers.Success, nil
+}
 
 func (srv *Auth) Logout(ctx context.Context, req *request.LogoutReq) (int, error) {
 	eCode := helpers.EDatabaseError

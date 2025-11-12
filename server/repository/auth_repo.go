@@ -72,6 +72,30 @@ func (repo *Auth) CUserSession(ctx context.Context, db *gorm.DB, session *entity
 	return db.WithContext(ctx).Clauses(clause.Returning{}).Create(session).Error
 }
 
+func (repo *Auth) RUserSessionWUserIDAndToken(
+	ctx context.Context,
+	db *gorm.DB,
+	userID uuid.UUID,
+	token string,
+) (*entity.UserSession, error) {
+	if db == nil {
+		db = repo.AuthDB
+	}
+	var session entity.UserSession
+	err := db.WithContext(ctx).Where("user_id = ? AND token = ?", userID, token).First(&session).Error
+	if err != nil {
+		return nil, err
+	}
+	return &session, nil
+}
+
+func (repo *Auth) UUserSession(ctx context.Context, db *gorm.DB, session *entity.UserSession) error {
+	if db == nil {
+		db = repo.AuthDB
+	}
+	return db.WithContext(ctx).Save(session).Error
+}
+
 func (repo *Auth) UUserSessionFuncRevokeSession(
 	ctx context.Context,
 	db *gorm.DB,
