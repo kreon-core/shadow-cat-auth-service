@@ -33,7 +33,7 @@ func NewAuthService(cfg *config.Config, authRepo *repository.Auth) *Auth {
 }
 
 func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.AuthData, int, error) {
-	var authData *dto.AuthData
+	authData := &dto.AuthData{}
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
@@ -114,7 +114,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 }
 
 func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthData, int, error) {
-	var authData *dto.AuthData
+	authData := &dto.AuthData{}
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
@@ -129,7 +129,7 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 			return errors.New("user_inactive")
 		}
 
-		if helpers.VerifyBcryptHash(user.PasswordHash, req.Password) {
+		if !helpers.VerifyBcryptHash(user.PasswordHash, req.Password) {
 			eCode = helpers.EAccessDenied
 			return errors.New("invalid_credentials")
 		}
@@ -188,7 +188,7 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 }
 
 func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.AuthData, int, error) {
-	var authData *dto.AuthData
+	authData := &dto.AuthData{}
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
@@ -204,6 +204,10 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 				eCode = helpers.ConvertPgErrToAppCode(txErr)
 				return fmt.Errorf("fetch_user_by_auth_provider -> %w", txErr)
 			}
+		}
+
+		if !isNewUser && authProvider == nil {
+			isNewUser = true
 		}
 		if isNewUser {
 			user = &entity.User{
@@ -318,7 +322,7 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 func (srv *Auth) AuthFirebase() {}
 
 func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (*dto.AuthRefreshData, int, error) {
-	var authRefreshData *dto.AuthRefreshData
+	authRefreshData := &dto.AuthRefreshData{}
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
