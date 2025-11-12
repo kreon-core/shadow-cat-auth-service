@@ -23,7 +23,7 @@ func RedactSensitive(v any) any {
 
 	case reflect.Struct:
 		result := make(map[string]any)
-		for i := 0; i < rv.NumField(); i++ {
+		for i := range rv.NumField() {
 			field := rt.Field(i)
 			if !rv.Field(i).CanInterface() {
 				continue
@@ -40,7 +40,7 @@ func RedactSensitive(v any) any {
 
 	case reflect.Slice, reflect.Array:
 		safeArr := make([]any, rv.Len())
-		for i := 0; i < rv.Len(); i++ {
+		for i := range rv.Len() {
 			safeArr[i] = RedactSensitive(rv.Index(i).Interface())
 		}
 		return safeArr

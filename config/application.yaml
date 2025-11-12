@@ -23,3 +23,6 @@ secrets:
       client: "Game Client"
       client-id: "game-client-id"
       client-secret: "game-client-secret"
+
+  zalo-secret:
+    nrm-sign-secret: "zalo-nrm-sign-secret"

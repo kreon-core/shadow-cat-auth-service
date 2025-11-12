@@ -1,6 +1,6 @@
 package request
 
-type ZaloBaseAuthReq struct {
+type AuthZaloBaseReq struct {
 	Channel     string `json:"channel"      binding:"required"` // Game distribution channel. ( "h5zl": open in H5, "inapp": open game inapp )
 	UID         string `json:"uid"          binding:"required"` // ID of user in Zalo platform.
 	Timestamp   string `json:"timestamp"    binding:"required"` // The time when the user logs into the game. Partners can use this parameter to set the expire time.
@@ -10,14 +10,14 @@ type ZaloBaseAuthReq struct {
 	Sign        string `json:"sign"         binding:"required"` // The md5 signature to verify the request is from Zalo platform.
 }
 
-type ZaloAuthReq struct {
-	ZaloBaseAuthReq
+type AuthZaloReq struct {
+	AuthZaloBaseReq
 
 	DisplayName string `json:"display_name"` // Display name of user in Zalo platform.
 	AvatarURL   string `json:"avatar_url"`   // Avatar URL of user in Zalo platform.
 }
 
-func (req *ZaloBaseAuthReq) ToMap() map[string]string {
+func (req *AuthZaloBaseReq) ToMap() map[string]string {
 	return map[string]string{
 		"channel":      req.Channel,
 		"uid":          req.UID,

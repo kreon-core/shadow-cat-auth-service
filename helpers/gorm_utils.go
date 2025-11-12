@@ -33,7 +33,7 @@ func ConvertPgErrToAppCode(err error) int {
 
 	var pgxErr *pgconn.PgError
 	if ok := errors.As(err, &pgxErr); ok {
-		if appCode, ok := pgxErrCode[pgxErr.Code]; ok {
+		if appCode, exists := pgxErrCode[pgxErr.Code]; exists {
 			return appCode
 		}
 	}

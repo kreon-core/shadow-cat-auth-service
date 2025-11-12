@@ -102,7 +102,53 @@ func (ctrl *Auth) Login(c *gin.Context) {
 	})
 }
 
-func (ctrl *Auth) AuthZalo(c *gin.Context)     {}
+func (ctrl *Auth) AuthZalo(c *gin.Context) {
+	var req request.AuthZaloReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		clog.Log().Warn("Auth.AuthZalo - invalid request",
+			clog.SafeAny("request", &req), zap.Error(err))
+		c.JSON(http.StatusBadRequest, &response.Resp{
+			ReturnCode:    helpers.EInvalidRequest,
+			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
+		})
+		return
+	}
+
+	ok := helpers.ValidateZaloDataWithZaloSign(req.ToMap(), ctrl.Config.Secrets.ZaloSecret.NrmSignSecret)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, &response.Resp{
+			ReturnCode:    helpers.EZaloSignatureMismatch,
+			ReturnMessage: helpers.Message(helpers.EZaloSignatureMismatch),
+		})
+		return
+	}
+
+	authData, eCode, err := ctrl.AuthSrv.AuthZalo(c.Request.Context(), &req)
+	if err != nil {
+		if eCode == helpers.EDatabaseError {
+			clog.Log().Error("Auth.AuthZalo - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		} else {
+			clog.Log().Warn("Auth.AuthZalo - service error",
+				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+		}
+		c.JSON(http.StatusBadRequest, &response.Resp{
+			ReturnCode:    eCode,
+			ReturnMessage: helpers.Message(eCode),
+		})
+		return
+	}
+
+	clog.Log().Info("Auth.AuthZalo - user authenticated successfully",
+		clog.SafeAny("request", &req),
+		zap.String("user_id", authData.UserID))
+	c.JSON(http.StatusOK, &response.Resp{
+		ReturnCode:    helpers.Success,
+		ReturnMessage: helpers.Message(helpers.Success),
+		Data:          authData,
+	})
+}
+
 func (ctrl *Auth) AuthFirebase(c *gin.Context) {}
 func (ctrl *Auth) RefreshToken(c *gin.Context) {}
 

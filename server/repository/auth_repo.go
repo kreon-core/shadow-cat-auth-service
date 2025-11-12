@@ -93,3 +93,19 @@ func (repo *Auth) CAuthProvider(ctx context.Context, db *gorm.DB, provider *enti
 	}
 	return db.WithContext(ctx).Clauses(clause.Returning{}).Create(provider).Error
 }
+
+func (repo *Auth) RAuthProviderWProviderUID(
+	ctx context.Context,
+	db *gorm.DB,
+	provider, uid string,
+) (*entity.AuthProvider, error) {
+	if db == nil {
+		db = repo.AuthDB
+	}
+	var authProvider entity.AuthProvider
+	err := db.WithContext(ctx).Where("provider = ? AND uid = ?", provider, uid).First(&authProvider).Error
+	if err != nil {
+		return nil, err
+	}
+	return &authProvider, nil
+}
