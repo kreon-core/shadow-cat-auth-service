@@ -41,7 +41,7 @@ func (repo *Auth) CUser(ctx context.Context, db *gorm.DB, user *entity.User) err
 	return db.WithContext(ctx).Clauses(clause.Returning{}).Create(user).Error
 }
 
-func (repo *Auth) RUserWID(ctx context.Context, db *gorm.DB, userID string) (*entity.User, error) {
+func (repo *Auth) RUserWID(ctx context.Context, db *gorm.DB, userID uuid.UUID) (*entity.User, error) {
 	if db == nil {
 		db = repo.AuthDB
 	}

@@ -1,9 +1,13 @@
 ###
-POST http://localhost:8080/api/v1/user/<user-id>/logout
+@user_id = 6d503427-5198-4e60-8d79-23942a389715
+@access_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzY3MtZ2FtZS1zZXJ2aWNlcyIsInN1YiI6IjZkNTAzNDI3LTUxOTgtNGU2MC04ZDc5LTIzOTQyYTM4OTcxNSIsImV4cCI6MTc2MzAwMjM2MywiaWF0IjoxNzYyOTk4NzYzLCJqdGkiOiI1MzNjNmJiNi04YzNkLTQyZDctOTFiMS02YzJlM2NkMjNlMTgiLCJ1c2VyX2lkIjoiNmQ1MDM0MjctNTE5OC00ZTYwLThkNzktMjM5NDJhMzg5NzE1IiwicGxheWVyX2lkIjoiYTgzNmE3MmEtZWVhNi00ZDA4LWEyNGMtYzhiMDMwY2FiYWY0Iiwicm9sZSI6InBsYXllciJ9.VC0GTeMpBRQwIStyRnvf-CQWhFpMjkMyx9Fk-f6--e8
+@refresh_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzY3MtZ2FtZS1zZXJ2aWNlcyIsInN1YiI6IjZkNTAzNDI3LTUxOTgtNGU2MC04ZDc5LTIzOTQyYTM4OTcxNSIsImV4cCI6MTc2MzYwMzU2MywiaWF0IjoxNzYyOTk4NzYzLCJqdGkiOiJjYzgwOTlhYi1lZjE1LTQ0NWEtYmE3My0zMjQ5OTcyNzUwYzgiLCJ1c2VyX2lkIjoiNmQ1MDM0MjctNTE5OC00ZTYwLThkNzktMjM5NDJhMzg5NzE1IiwicGxheWVyX2lkIjoiYTgzNmE3MmEtZWVhNi00ZDA4LWEyNGMtYzhiMDMwY2FiYWY0Iiwicm9sZSI6InBsYXllciIsInRva2VuIjoiY2M4MDk5YWItZWYxNS00NDVhLWJhNzMtMzI0OTk3Mjc1MGM4In0.6sXxG2yqVCnfkHhdRtOREv9EQmga6_0WyksVGLFvWGw
+
+POST http://localhost:8080/api/v1/user/{{user_id}}/logout
 Accept: application/json
 Content-Type: application/json; charset=utf-8
-Authorization: Bearer <jwt-access-token>
+Authorization: Bearer {{access_token}}
 
 {
-    "refresh_token": "<jwt-refresh-token>"
+    "refresh_token": "{{refresh_token}}"
 }

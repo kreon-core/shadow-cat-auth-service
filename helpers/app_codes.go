@@ -17,6 +17,7 @@ const (
 
 const (
 	EInvalidRequest = -2 - iota
+	EInvalidUUIDFormat
 
 	EZaloSignatureMismatch = -90
 )
@@ -71,7 +72,8 @@ var messages = map[int]string{ //nolint:gochecknoglobals // global map of code-m
 	SResourceUpdatedSuccessfully: "Resource updated successfully",
 	SResourceDeletedSuccessfully: "Resource deleted successfully",
 
-	EInvalidRequest: "Invalid request",
+	EInvalidRequest:    "Invalid request",
+	EInvalidUUIDFormat: "Invalid UUID format",
 
 	EZaloSignatureMismatch: "Zalo signature mismatch",
 

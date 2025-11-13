@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
@@ -249,7 +250,7 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 				return fmt.Errorf("create_auth_provider -> %w", txErr)
 			}
 		} else {
-			user, txErr = srv.AuthRepo.RUserWID(ctx, tx, authProvider.UserID.String())
+			user, txErr = srv.AuthRepo.RUserWID(ctx, tx, authProvider.UserID)
 			if txErr != nil {
 				eCode = helpers.ConvertPgErrToAppCode(txErr)
 				return fmt.Errorf("fetch_user -> %w", txErr)
@@ -326,7 +327,13 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
-		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, req.UserID)
+		userID, parseErr := uuid.Parse(req.UserID)
+		if parseErr != nil {
+			eCode = helpers.EInvalidUUIDFormat
+			return fmt.Errorf("parse_user_id -> %w", parseErr)
+		}
+
+		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, userID)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("fetch_user -> %w", txErr)
@@ -413,6 +420,12 @@ func (srv *Auth) Logout(ctx context.Context, userID string, req *request.LogoutR
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
+		userID, parseErr := uuid.Parse(userID)
+		if parseErr != nil {
+			eCode = helpers.EInvalidUUIDFormat
+			return fmt.Errorf("parse_user_id -> %w", parseErr)
+		}
+
 		user, txErr := srv.AuthRepo.RUserWID(ctx, tx, userID)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)

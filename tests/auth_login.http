@@ -1,13 +1,18 @@
 ###
+@username = user6949
+@password = Passw0rd!
+@client_id = game-client-id
+@client_signature = HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
+
 POST http://localhost:8080/api/v1/auth/login
 Accept: application/json
 Content-Type: application/json; charset=utf-8
-X-Client-ID: game-client-id
-X-Client-Signature: Client HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
+X-Client-ID: {{client_id}}
+X-Client-Signature: Client {{client_signature}}
 
 {
-    "username": "user4557",
-    "password": "Passw0rd!"
+    "username": "{{username}}",
+    "password": "{{password}}"
 }
 
 # # Expected Response 200 -- OK

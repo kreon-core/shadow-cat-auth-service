@@ -1,0 +1,17 @@
+###
+@user_id = 6d503427-5198-4e60-8d79-23942a389715
+@refresh_token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzY3MtZ2FtZS1zZXJ2aWNlcyIsInN1YiI6IjZkNTAzNDI3LTUxOTgtNGU2MC04ZDc5LTIzOTQyYTM4OTcxNSIsImV4cCI6MTc2MzYwMzQxOSwiaWF0IjoxNzYyOTk4NjE5LCJqdGkiOiI4YTFhZTkyMS1lMWU1LTQ2MmEtYTAzZi1kMDI3ZmNiNWRiYTciLCJ1c2VyX2lkIjoiNmQ1MDM0MjctNTE5OC00ZTYwLThkNzktMjM5NDJhMzg5NzE1IiwicGxheWVyX2lkIjoiYTgzNmE3MmEtZWVhNi00ZDA4LWEyNGMtYzhiMDMwY2FiYWY0Iiwicm9sZSI6InBsYXllciIsInRva2VuIjoiOGExYWU5MjEtZTFlNS00NjJhLWEwM2YtZDAyN2ZjYjVkYmE3In0.t2o9oxo9ReNE6se7syNlD_5T5C0raLTSRDXb0vOc_Gc
+
+@client_id = game-client-id
+@client_signature = HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
+
+POST http://localhost:8080/api/v1/auth/refresh
+Accept: application/json
+Content-Type: application/json; charset=utf-8
+X-Client-ID: {{client_id}}
+X-Client-Signature: Client {{client_signature}}
+
+{
+    "user_id": "{{user_id}}",
+    "refresh_token": "{{refresh_token}}"
+}
