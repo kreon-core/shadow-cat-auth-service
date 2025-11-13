@@ -1,5 +1,6 @@
 ###
 @username = user6949
+@email = user6949@example.com
 @password = Passw0rd!
 @client_id = game-client-id
 @client_signature = HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
@@ -12,6 +13,7 @@ X-Client-Signature: Client {{client_signature}}
 
 {
     "username": "{{username}}",
+    "email": "{{email}}"
     "password": "{{password}}"
 }
 

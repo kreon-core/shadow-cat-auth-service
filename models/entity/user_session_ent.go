@@ -16,8 +16,8 @@ type UserSession struct {
 	ExpiresAt time.Time `gorm:"type:timestamptz;not null"`
 	Revoked   bool      `gorm:"type:boolean;not null;default:false"`
 
-	DeviceInfo datatypes.JSON `gorm:"type:jsonb"`
-	IPAddress  string         `gorm:"type:varchar(45)"`
+	DeviceInfo datatypes.JSON       `gorm:"type:jsonb"`
+	IPAddress  datatypes.NullString `gorm:"type:varchar(45)"`
 
 	// Associations
 	User User `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE"`

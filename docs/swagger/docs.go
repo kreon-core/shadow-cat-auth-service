@@ -14,24 +14,7 @@ const docTemplate = `{
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
-    "paths": {},
-    "securityDefinitions": {
-        "BearerAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        },
-        "ClientCredential": {
-            "type": "apiKey",
-            "name": "X-Client-Signature",
-            "in": "header"
-        },
-        "ClientID": {
-            "type": "apiKey",
-            "name": "X-Client-ID",
-            "in": "header"
-        }
-    }
+    "paths": {}
 }`
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it

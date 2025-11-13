@@ -4,17 +4,4 @@ info:
   title: Shadow Cat Auth HTTP APIs
   version: "1.0"
 paths: {}
-securityDefinitions:
-  BearerAuth:
-    in: header
-    name: Authorization
-    type: apiKey
-  ClientCredential:
-    in: header
-    name: X-Client-Signature
-    type: apiKey
-  ClientID:
-    in: header
-    name: X-Client-ID
-    type: apiKey
 swagger: "2.0"

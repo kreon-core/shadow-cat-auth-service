@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -42,22 +41,10 @@ type HTTPServer struct {
 
 // NewHTTPServer HTTP APIs for Shadow Cat auth service.
 //
-//	@title						Shadow Cat Auth HTTP APIs
-//	@version					1.0
-//	@description				Backend HTTP APIs for Shadow Cat auth service.
-//	@scheme						http https
-//
-//	@securityDefinitions.apikey	BearerAuth
-//	@in							header
-//	@name						Authorization
-//
-//	@securityDefinitions.apikey	ClientID
-//	@in							header
-//	@name						X-Client-ID
-//
-//	@securityDefinitions.apikey	ClientCredential
-//	@in							header
-//	@name						X-Client-Signature
+//	@title			Shadow Cat Auth HTTP APIs
+//	@version		1.0
+//	@description	Backend HTTP APIs for Shadow Cat auth service.
+//	@scheme			http https
 func NewHTTPServer(
 	cfg *config.Config,
 	pgDBs map[string]*gorm.DB,
@@ -73,14 +60,7 @@ func NewHTTPServer(
 	userCtrl := controller.NewUserController()
 
 	r := gin.Default()
-	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"*"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "X-Client-ID", "X-Client-Signature"},
-		ExposeHeaders:    []string{"Content-Length"},
-		AllowCredentials: true,
-		MaxAge:           12 * time.Hour,
-	}))
+	r.Use(helpers.StandardCORS())
 
 	router.LoadRoutes(r, cfg,
 		clientCredMW, authMW,

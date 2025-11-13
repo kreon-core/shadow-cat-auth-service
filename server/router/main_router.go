@@ -38,7 +38,7 @@ func LoadRoutes(
 	authGroup.Use(clientCredMW.Handle)
 	loadAuthRoutes(authGroup, authCtrl)
 
-	userGroup := rv1.Group("/user/:id")
+	userGroup := rv1.Group("/user")
 	userGroup.Use(authMW.Handle)
 	loadUserRoutes(userGroup, authCtrl, userCtrl)
 }

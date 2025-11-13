@@ -6,22 +6,5 @@
         "contact": {},
         "version": "1.0"
     },
-    "paths": {},
-    "securityDefinitions": {
-        "BearerAuth": {
-            "type": "apiKey",
-            "name": "Authorization",
-            "in": "header"
-        },
-        "ClientCredential": {
-            "type": "apiKey",
-            "name": "X-Client-Signature",
-            "in": "header"
-        },
-        "ClientID": {
-            "type": "apiKey",
-            "name": "X-Client-ID",
-            "in": "header"
-        }
-    }
+    "paths": {}
 }

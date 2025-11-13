@@ -66,7 +66,6 @@ func (m *Auth) Handle(c *gin.Context) {
 
 	c.Set("is_authenticated", true)
 	c.Set("user_id", claims.UserID)
-	c.Set("player_id", claims.PlayerID)
 	c.Set("role", claims.Role)
 
 	c.Next()

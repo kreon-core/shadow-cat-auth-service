@@ -10,18 +10,17 @@ import (
 type AccessClaims struct {
 	jwt.RegisteredClaims
 
-	UserID   string `json:"user_id"`
-	PlayerID string `json:"player_id"`
-	Role     string `json:"role"`
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+	Token  string `json:"token"`
 }
 
 type RefreshClaims struct {
 	jwt.RegisteredClaims
 
-	UserID   string `json:"user_id"`
-	PlayerID string `json:"player_id"`
-	Role     string `json:"role"`
-	Token    string `json:"token"`
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+	Token  string `json:"token"`
 }
 
 const (
@@ -29,13 +28,13 @@ const (
 	defaultRefreshTokenExpiry = time.Hour * 24 * 7
 )
 
-func GenerateJWTAccessToken(userID, playerID, role string,
+func GenerateJWTAccessToken(userID, role, sessionToken string,
 	issuer string, jwtSecretKey []byte, tokenExpiry time.Duration,
 ) (string, error) {
 	claims := &AccessClaims{
-		UserID:   userID,
-		PlayerID: playerID,
-		Role:     role,
+		UserID: userID,
+		Role:   role,
+		Token:  sessionToken,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: issuer,
 			ID:     uuid.NewString(),
@@ -61,18 +60,16 @@ func ParseJWTAccessToken(tokenString string, jwtSecretKey []byte) (*jwt.Token, *
 	return token, claims, err
 }
 
-func GenerateJWTRefreshToken(userID, playerID, role string,
+func GenerateJWTRefreshToken(userID, role, sessionToken string,
 	issuer string, jwtSecretKey []byte, tokenExpiry time.Duration,
-) (string, string, error) {
-	tokenID := uuid.NewString()
+) (string, error) {
 	claims := &RefreshClaims{
-		UserID:   userID,
-		PlayerID: playerID,
-		Role:     role,
-		Token:    tokenID,
+		UserID: userID,
+		Role:   role,
+		Token:  sessionToken,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer: issuer,
-			ID:     tokenID,
+			ID:     sessionToken,
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(
 				OrDefault(tokenExpiry, defaultRefreshTokenExpiry),
 			)),
@@ -82,7 +79,7 @@ func GenerateJWTRefreshToken(userID, playerID, role string,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signedToken, err := token.SignedString(jwtSecretKey)
-	return signedToken, tokenID, err
+	return signedToken, err
 }
 
 func ParseJWTRefreshToken(tokenString string, jwtSecretKey []byte) (*jwt.Token, *RefreshClaims, error) {

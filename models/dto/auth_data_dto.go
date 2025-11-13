@@ -18,8 +18,6 @@ type AuthData struct {
 
 	Provider *AuthProviderData `json:"provider,omitempty"`
 
-	PlayerID string `json:"player_id"`
-
 	TokenType    enum.TokenType `json:"token_type"`
 	AccessToken  string         `json:"access_token"`
 	ExpiresIn    int64          `json:"expires_in"`

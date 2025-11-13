@@ -49,15 +49,17 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		username := helpers.OrDefault(req.Username, emailLocal)
 		user := &entity.User{
 			Username:     username,
-			Email:        req.Email,
-			PasswordHash: passwordHash,
+			PasswordHash: datatypes.NullString{V: passwordHash, Valid: true},
 			Role:         "player",
-			DisplayName:  helpers.OrDefault(req.DisplayName, req.Username),
-			AvatarURL: helpers.OrDefault(
+			DisplayName:  datatypes.NullString{V: helpers.OrDefault(req.DisplayName, req.Username), Valid: true},
+			AvatarURL: datatypes.NullString{V: helpers.OrDefault(
 				req.AvatarURL,
 				fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", username),
-			),
+			), Valid: true},
 			Status: "active",
+		}
+		if !helpers.IsBlankString(&req.Email) {
+			user.Email = datatypes.NullString{V: req.Email, Valid: true}
 		}
 		txErr := srv.AuthRepo.CUser(ctx, tx, user)
 		if txErr != nil {
@@ -65,10 +67,12 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			return fmt.Errorf("create_user -> %w", txErr)
 		}
 
+		sessionToken := uuid.NewString()
+
 		jwtIssuer := srv.Config.Secrets.JWTIssuer
 		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
 		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.AccessTokenExpiry,
 		)
@@ -76,8 +80,8 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			eCode = helpers.EJWTGenerationFailed
 			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
 		}
-		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+		jwtRefreshToken, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.RefreshTokenExpiry,
 		)
@@ -87,7 +91,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 		}
 		userSession := &entity.UserSession{
 			UserID:    user.ID,
-			Token:     token,
+			Token:     sessionToken,
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
@@ -99,12 +103,17 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 
 		authData.UserID = user.ID.String()
 		authData.Username = user.Username
-		authData.Email = user.Email
+		if user.Email.Valid {
+			authData.Email = user.Email.V
+		}
 		authData.Role = user.Role
-		authData.DisplayName = user.DisplayName
-		authData.AvatarURL = user.AvatarURL
+		if user.DisplayName.Valid {
+			authData.DisplayName = user.DisplayName.V
+		}
+		if user.AvatarURL.Valid {
+			authData.AvatarURL = user.AvatarURL.V
+		}
 		authData.Status = user.Status
-		authData.PlayerID = user.PlayerID.String()
 		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
@@ -148,15 +157,17 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 			return errors.New("user_inactive")
 		}
 
-		if !helpers.VerifyBcryptHash(user.PasswordHash, req.Password) {
+		if !user.PasswordHash.Valid || !helpers.VerifyBcryptHash(user.PasswordHash.V, req.Password) {
 			eCode = helpers.EAccessDenied
 			return errors.New("invalid_credentials")
 		}
 
+		sessionToken := uuid.NewString()
+
 		jwtIssuer := srv.Config.Secrets.JWTIssuer
 		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
 		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.AccessTokenExpiry,
 		)
@@ -164,8 +175,8 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 			eCode = helpers.EJWTGenerationFailed
 			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
 		}
-		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+		jwtRefreshToken, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.RefreshTokenExpiry,
 		)
@@ -175,7 +186,7 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 		}
 		userSession := &entity.UserSession{
 			UserID:    user.ID,
-			Token:     token,
+			Token:     sessionToken,
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
@@ -187,12 +198,17 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 
 		authData.UserID = user.ID.String()
 		authData.Username = user.Username
-		authData.Email = user.Email
+		if user.Email.Valid {
+			authData.Email = user.Email.V
+		}
 		authData.Role = user.Role
-		authData.DisplayName = user.DisplayName
-		authData.AvatarURL = user.AvatarURL
+		if user.DisplayName.Valid {
+			authData.DisplayName = user.DisplayName.V
+		}
+		if user.AvatarURL.Valid {
+			authData.AvatarURL = user.AvatarURL.V
+		}
 		authData.Status = user.Status
-		authData.PlayerID = user.PlayerID.String()
 		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
@@ -230,13 +246,16 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 		}
 		if isNewUser {
 			user = &entity.User{
-				Username:    fmt.Sprintf("zalo_%s", req.UID),
-				Role:        "player",
-				DisplayName: helpers.OrDefault(req.DisplayName, fmt.Sprintf("ZaloUser_%s", req.UID)),
-				AvatarURL: helpers.OrDefault(
+				Username: fmt.Sprintf("zalo_%s", req.UID),
+				Role:     "player",
+				DisplayName: datatypes.NullString{
+					V:     helpers.OrDefault(req.DisplayName, fmt.Sprintf("ZaloUser_%s", req.UID)),
+					Valid: true,
+				},
+				AvatarURL: datatypes.NullString{V: helpers.OrDefault(
 					req.AvatarURL,
 					fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", req.UID),
-				),
+				), Valid: true},
 				Status: "active",
 			}
 			txErr = srv.AuthRepo.CUser(ctx, tx, user)
@@ -279,10 +298,12 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 			}
 		}
 
+		sessionToken := uuid.NewString()
+
 		jwtIssuer := srv.Config.Secrets.JWTIssuer
 		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
 		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.AccessTokenExpiry,
 		)
@@ -290,8 +311,8 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 			eCode = helpers.EJWTGenerationFailed
 			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
 		}
-		jwtRefreshToken, token, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+		jwtRefreshToken, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.Role, sessionToken,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.RefreshTokenExpiry,
 		)
@@ -301,7 +322,7 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 		}
 		userSession := &entity.UserSession{
 			UserID:    user.ID,
-			Token:     token,
+			Token:     sessionToken,
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
@@ -313,10 +334,16 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 
 		authData.UserID = user.ID.String()
 		authData.Username = user.Username
-		authData.Email = user.Email
+		if user.Email.Valid {
+			authData.Email = user.Email.V
+		}
 		authData.Role = user.Role
-		authData.DisplayName = user.DisplayName
-		authData.AvatarURL = user.AvatarURL
+		if user.DisplayName.Valid {
+			authData.DisplayName = user.DisplayName.V
+		}
+		if user.AvatarURL.Valid {
+			authData.AvatarURL = user.AvatarURL.V
+		}
 		authData.Status = user.Status
 		authData.Provider = &dto.AuthProviderData{
 			Name:     authProvider.Provider,
@@ -324,7 +351,6 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 			LinkedAt: authProvider.LinkedAt,
 			Metadata: authProvider.Metadata,
 		}
-		authData.PlayerID = user.PlayerID.String()
 		authData.TokenType = enum.TokenTypeBearer
 		authData.AccessToken = jwtAccessToken
 		authData.ExpiresIn = int64(srv.Config.Secrets.AccessTokenExpiry.Seconds())
@@ -395,7 +421,7 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 		jwtIssuer := srv.Config.Secrets.JWTIssuer
 		jwtSecretKey := []byte(srv.Config.Secrets.JWTSecretKey)
 		jwtAccessToken, txErr := helpers.GenerateJWTAccessToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+			user.ID.String(), user.Role, claims.Token,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.AccessTokenExpiry,
 		)
@@ -403,8 +429,8 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 			eCode = helpers.EJWTGenerationFailed
 			return fmt.Errorf("generate_jwt_access_token -> %w", txErr)
 		}
-		jwtRefreshToken, newToken, txErr := helpers.GenerateJWTRefreshToken(
-			user.ID.String(), user.PlayerID.String(), user.Role,
+		jwtRefreshToken, txErr := helpers.GenerateJWTRefreshToken(
+			user.ID.String(), user.Role, claims.Token,
 			jwtIssuer, jwtSecretKey,
 			srv.Config.Secrets.RefreshTokenExpiry,
 		)
@@ -413,7 +439,7 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 			return fmt.Errorf("generate_jwt_refresh_token -> %w", txErr)
 		}
 
-		userSession.Token = newToken
+		userSession.Token = claims.Token
 		userSession.ExpiresAt = time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry)
 		txErr = srv.AuthRepo.UUserSession(ctx, tx, userSession)
 		if txErr != nil {

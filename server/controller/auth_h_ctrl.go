@@ -189,9 +189,9 @@ func (ctrl *Auth) AuthRefresh(c *gin.Context) {
 }
 
 func (ctrl *Auth) Logout(c *gin.Context) {
-	userID := c.Param("id")
+	userID := c.GetString("user_id")
 	if helpers.IsBlankString(&userID) {
-		clog.Log().Warn("Auth.Logout - missing user ID in path",
+		clog.Log().Warn("Auth.Logout - missing user ID in access_token",
 			zap.String("user_id", userID))
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    helpers.EInvalidRequest,
