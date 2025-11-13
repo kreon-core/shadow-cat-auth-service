@@ -49,10 +49,10 @@ func NewHTTPServer(
 	cfg *config.Config,
 	pgDBs map[string]*gorm.DB,
 ) *HTTPServer {
-	clientCredMW := middleware.NewClientCredentialMiddleware(cfg)
-	authMW := middleware.NewAuthMiddleware(cfg)
-
 	authRepo := repository.NewAuthRepository(cfg, pgDBs[database.AuthDB])
+
+	clientCredMW := middleware.NewClientCredentialMiddleware(cfg)
+	authMW := middleware.NewAuthMiddleware(cfg, authRepo)
 
 	authSrv := service.NewAuthService(cfg, authRepo)
 
