@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 
 	"scs-auth-service/config"
 	"scs-auth-service/helpers"
 	"scs-auth-service/models/response"
+	"scs-auth-service/o11y/clog"
 	"scs-auth-service/server/repository"
 )
 
@@ -76,15 +78,28 @@ func (m *Auth) Handle(c *gin.Context) {
 		})
 		return
 	}
-	userSession, err := m.AuthRepo.RUserSessionWUserIDAndToken(c.Request.Context(), nil, userID, claims.Token)
+	userSession, err := m.AuthRepo.RUserSessionWUserID(c.Request.Context(), nil, userID)
 	if err != nil || userSession == nil {
+		clog.Log().Warn("AuthMiddleware.Handle - user session not found",
+			zap.String("user_id", claims.UserID), zap.Error(err))
 		c.AbortWithStatusJSON(http.StatusUnauthorized, &response.Resp{
-			ReturnCode:    helpers.EOtherSessionActive,
-			ReturnMessage: helpers.Message(helpers.EOtherSessionActive),
+			ReturnCode:    helpers.EInvalidAccessToken,
+			ReturnMessage: helpers.Message(helpers.EInvalidAccessToken),
 		})
 		return
 	} else {
+		if userSession.Token != claims.Token {
+			clog.Log().Warn("AuthMiddleware.Handle - user session token mismatch",
+				zap.String("user_id", claims.UserID), zap.String("session_token", userSession.Token), zap.String("token_claim", claims.Token))
+			c.AbortWithStatusJSON(http.StatusUnauthorized, &response.Resp{
+				ReturnCode:    helpers.EOtherSessionActive,
+				ReturnMessage: helpers.Message(helpers.EOtherSessionActive),
+			})
+			return
+		}
 		if userSession.Revoked {
+			clog.Log().Warn("AuthMiddleware.Handle - user session revoked",
+				zap.String("user_id", claims.UserID))
 			c.AbortWithStatusJSON(http.StatusUnauthorized, &response.Resp{
 				ReturnCode:    helpers.EExpiredAccessToken,
 				ReturnMessage: helpers.Message(helpers.EExpiredAccessToken),

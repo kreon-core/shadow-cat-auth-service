@@ -1,7 +1,7 @@
 ### Register User
 @rand = {{$randomInt 1000 9999}}
-@username = user{{rand}}
-@email = email{{rand}}@example.com
+@username_opt_if_email_valid = user{{rand}}
+@email_opt_if_username_valid = email{{rand}}@example.com
 @password = Passw0rd!
 @client_id = game-client-id
 @client_signature = HSSHSP1EqL8DQaYodmO3xIFXG/XHl460o7Hcn5uWv6g=
@@ -13,8 +13,8 @@ X-Client-ID: {{client_id}}
 X-Client-Signature: Client {{client_signature}}
 
 {
-    "username": "{{username}}",
-    "email": "{{email}}",
+    "username": "{{username_opt_if_email_valid}}",
+    "email": "{{email_opt_if_username_valid}}",
     "password": "{{password}}",
     "display_name": "",
     "avatar_url": ""

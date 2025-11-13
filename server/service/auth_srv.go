@@ -402,17 +402,23 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 			return errors.New("token_user_mismatch")
 		}
 
-		userSession, txErr := srv.AuthRepo.RUserSessionWUserIDAndToken(ctx, tx, user.ID, claims.Token)
+		userSession, txErr := srv.AuthRepo.RUserSessionWUserID(ctx, tx, user.ID)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("fetch_user_session -> %w", txErr)
 		}
-
+		if userSession == nil {
+			eCode = helpers.EResourceNotFound
+			return errors.New("invalid_refresh_token")
+		}
+		if userSession.Token != claims.Token {
+			eCode = helpers.EOtherSessionActive
+			return errors.New("refresh_token_used_in_other_session")
+		}
 		if userSession.Revoked {
 			eCode = helpers.EAccessDenied
 			return errors.New("refresh_token_revoked")
 		}
-
 		if userSession.ExpiresAt.Before(time.Now()) {
 			eCode = helpers.EExpiredRefreshToken
 			return errors.New("refresh_token_expired")

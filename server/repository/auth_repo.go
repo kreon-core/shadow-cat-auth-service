@@ -91,17 +91,16 @@ func (repo *Auth) SUserSession(ctx context.Context, db *gorm.DB, session *entity
 	return db.WithContext(ctx).Save(session).Error
 }
 
-func (repo *Auth) RUserSessionWUserIDAndToken(
+func (repo *Auth) RUserSessionWUserID(
 	ctx context.Context,
 	db *gorm.DB,
 	userID uuid.UUID,
-	token string,
 ) (*entity.UserSession, error) {
 	if db == nil {
 		db = repo.AuthDB
 	}
 	var session entity.UserSession
-	err := db.WithContext(ctx).Where("user_id = ? AND token = ?", userID, token).First(&session).Error
+	err := db.WithContext(ctx).Where("user_id = ?", userID).First(&session).Error
 	if err != nil {
 		return nil, err
 	}
