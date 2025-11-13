@@ -43,8 +43,6 @@ X-Client-Signature: Client <signature_provided_by_server>
 #             }
 #         },
 
-#         "player_id": "<player-uuid>",
-
 #         "token_type": "Bearer",
 #         "access_token": "<jwt-access-token>",
 #         "expires_in": <access-token-expiry-in-seconds>,
