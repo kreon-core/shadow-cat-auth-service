@@ -28,7 +28,7 @@ func NewAuthController(cfg *config.Config, authSrv *service.Auth) *Auth {
 
 func (ctrl *Auth) Register(c *gin.Context) {
 	var req request.RegisterReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil || !req.Valid() {
 		clog.Log().Warn("Auth.Register - invalid request",
 			clog.SafeAny("request", &req), zap.Error(err))
 		c.JSON(http.StatusBadRequest, &response.Resp{
@@ -66,7 +66,7 @@ func (ctrl *Auth) Register(c *gin.Context) {
 
 func (ctrl *Auth) Login(c *gin.Context) {
 	var req request.LoginReq
-	if err := c.ShouldBindJSON(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil || !req.Valid() {
 		clog.Log().Warn("Auth.Login - invalid request",
 			clog.SafeAny("request", &req), zap.Error(err))
 		c.JSON(http.StatusBadRequest, &response.Resp{
@@ -200,25 +200,14 @@ func (ctrl *Auth) Logout(c *gin.Context) {
 		return
 	}
 
-	var req request.LogoutReq
-	if err := c.ShouldBindJSON(&req); err != nil {
-		clog.Log().Warn("Auth.Logout - invalid request",
-			clog.SafeAny("request", &req), zap.Error(err))
-		c.JSON(http.StatusBadRequest, &response.Resp{
-			ReturnCode:    helpers.EInvalidRequest,
-			ReturnMessage: helpers.Message(helpers.EInvalidRequest),
-		})
-		return
-	}
-
-	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), userID, &req)
+	eCode, err := ctrl.AuthSrv.Logout(c.Request.Context(), userID)
 	if err != nil {
 		if eCode == helpers.EDatabaseError {
 			clog.Log().Error("Auth.Logout - service error",
-				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+				zap.String("user_id", userID), zap.Int("error_code", eCode), zap.Error(err))
 		} else {
 			clog.Log().Warn("Auth.Logout - service error",
-				clog.SafeAny("request", &req), zap.Int("error_code", eCode), zap.Error(err))
+				zap.String("user_id", userID), zap.Int("error_code", eCode), zap.Error(err))
 		}
 		c.JSON(http.StatusBadRequest, &response.Resp{
 			ReturnCode:    eCode,
@@ -228,7 +217,7 @@ func (ctrl *Auth) Logout(c *gin.Context) {
 	}
 
 	clog.Log().Info("Auth.Logout - user logged out successfully",
-		clog.SafeAny("request", &req))
+		zap.String("user_id", userID))
 	c.JSON(http.StatusOK, &response.Resp{
 		ReturnCode:    helpers.Success,
 		ReturnMessage: helpers.Message(helpers.Success),

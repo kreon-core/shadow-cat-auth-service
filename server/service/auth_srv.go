@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -43,15 +44,18 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			eCode = helpers.EInvalidRequest
 			return fmt.Errorf("hash_password -> %w", err)
 		}
+
+		emailLocal := strings.SplitN(req.Email, "@", 2)[0]
+		username := helpers.OrDefault(req.Username, emailLocal)
 		user := &entity.User{
-			Username:     req.Username,
+			Username:     username,
 			Email:        req.Email,
 			PasswordHash: passwordHash,
 			Role:         "player",
 			DisplayName:  helpers.OrDefault(req.DisplayName, req.Username),
 			AvatarURL: helpers.OrDefault(
 				req.AvatarURL,
-				fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", req.Username),
+				fmt.Sprintf("https://www.gravatar.com/avatar/%s?d=identicon&s=128", username),
 			),
 			Status: "active",
 		}
@@ -87,7 +91,7 @@ func (srv *Auth) Register(ctx context.Context, req *request.RegisterReq) (*dto.A
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
-		txErr = srv.AuthRepo.CUserSession(ctx, tx, userSession)
+		txErr = srv.AuthRepo.SUserSession(ctx, tx, userSession)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("create_user_session -> %w", txErr)
@@ -119,10 +123,24 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
-		user, txErr := srv.AuthRepo.RUserWUsername(ctx, tx, req.Username)
-		if txErr != nil {
-			eCode = helpers.ConvertPgErrToAppCode(txErr)
-			return fmt.Errorf("fetch_user -> %w", txErr)
+		var user *entity.User
+		var txErr error
+
+		if !helpers.IsBlankString(&req.Username) {
+			user, txErr = srv.AuthRepo.RUserWUsername(ctx, tx, req.Username)
+			if txErr != nil {
+				eCode = helpers.ConvertPgErrToAppCode(txErr)
+				return fmt.Errorf("fetch_user -> %w", txErr)
+			}
+		} else if !helpers.IsBlankString(&req.Email) {
+			user, txErr = srv.AuthRepo.RUserWEmail(ctx, tx, req.Email)
+			if txErr != nil {
+				eCode = helpers.ConvertPgErrToAppCode(txErr)
+				return fmt.Errorf("fetch_user -> %w", txErr)
+			}
+		} else {
+			eCode = helpers.EInvalidRequest
+			return errors.New("missing_username_or_email")
 		}
 
 		if user.Status != "active" {
@@ -161,7 +179,7 @@ func (srv *Auth) Login(ctx context.Context, req *request.LoginReq) (*dto.AuthDat
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
-		txErr = srv.AuthRepo.CUserSession(ctx, tx, userSession)
+		txErr = srv.AuthRepo.SUserSession(ctx, tx, userSession)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("create_user_session -> %w", txErr)
@@ -287,7 +305,7 @@ func (srv *Auth) AuthZalo(ctx context.Context, req *request.AuthZaloReq) (*dto.A
 			ExpiresAt: time.Now().Add(srv.Config.Secrets.RefreshTokenExpiry),
 			// DeviceInfo & IP Address
 		}
-		txErr = srv.AuthRepo.CUserSession(ctx, tx, userSession)
+		txErr = srv.AuthRepo.SUserSession(ctx, tx, userSession)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("create_user_session -> %w", txErr)
@@ -416,7 +434,7 @@ func (srv *Auth) AuthRefresh(ctx context.Context, req *request.AuthRefreshReq) (
 	return authRefreshData, helpers.Success, nil
 }
 
-func (srv *Auth) Logout(ctx context.Context, userID string, req *request.LogoutReq) (int, error) {
+func (srv *Auth) Logout(ctx context.Context, userID string) (int, error) {
 	eCode := helpers.EDatabaseError
 
 	err := srv.AuthRepo.WithTransaction(ctx, nil, func(tx *gorm.DB) error {
@@ -432,24 +450,7 @@ func (srv *Auth) Logout(ctx context.Context, userID string, req *request.LogoutR
 			return fmt.Errorf("fetch_user -> %w", txErr)
 		}
 
-		token, claims, txErr := helpers.ParseJWTRefreshToken(req.RefreshToken, []byte(srv.Config.Secrets.JWTSecretKey))
-		if txErr != nil {
-			if !errors.Is(txErr, jwt.ErrTokenExpired) {
-				eCode = helpers.EInvalidRefreshToken
-				return fmt.Errorf("parse_jwt_refresh_token -> %w", txErr)
-			}
-		}
-		if !token.Valid {
-			eCode = helpers.EInvalidRefreshToken
-			return errors.New("invalid_jwt_refresh_token")
-		}
-
-		if claims.UserID != user.ID.String() {
-			eCode = helpers.EInvalidRefreshToken
-			return errors.New("token_user_mismatch")
-		}
-
-		txErr = srv.AuthRepo.UUserSessionFuncRevokeSession(ctx, tx, user.ID, claims.Token)
+		txErr = srv.AuthRepo.UUserSessionFuncRevokeSession(ctx, tx, user.ID)
 		if txErr != nil {
 			eCode = helpers.ConvertPgErrToAppCode(txErr)
 			return fmt.Errorf("revoke_user_session -> %w", txErr)

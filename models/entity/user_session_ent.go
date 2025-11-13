@@ -10,8 +10,7 @@ import (
 type UserSession struct {
 	TimeMeta
 
-	ID     uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey"`
-	UserID uuid.UUID `gorm:"type:uuid;not null;index"`
+	UserID uuid.UUID `gorm:"type:uuid;primaryKey"`
 
 	Token     string    `gorm:"type:text;not null;uniqueIndex"`
 	ExpiresAt time.Time `gorm:"type:timestamptz;not null"`

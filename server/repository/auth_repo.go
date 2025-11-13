@@ -65,11 +65,30 @@ func (repo *Auth) RUserWUsername(ctx context.Context, db *gorm.DB, username stri
 	return &user, nil
 }
 
+func (repo *Auth) RUserWEmail(ctx context.Context, db *gorm.DB, email string) (*entity.User, error) {
+	if db == nil {
+		db = repo.AuthDB
+	}
+	var user entity.User
+	err := db.WithContext(ctx).Where("email = ?", email).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (repo *Auth) CUserSession(ctx context.Context, db *gorm.DB, session *entity.UserSession) error {
 	if db == nil {
 		db = repo.AuthDB
 	}
 	return db.WithContext(ctx).Clauses(clause.Returning{}).Create(session).Error
+}
+
+func (repo *Auth) SUserSession(ctx context.Context, db *gorm.DB, session *entity.UserSession) error {
+	if db == nil {
+		db = repo.AuthDB
+	}
+	return db.WithContext(ctx).Save(session).Error
 }
 
 func (repo *Auth) RUserSessionWUserIDAndToken(
@@ -100,13 +119,12 @@ func (repo *Auth) UUserSessionFuncRevokeSession(
 	ctx context.Context,
 	db *gorm.DB,
 	userID uuid.UUID,
-	token string,
 ) error {
 	if db == nil {
 		db = repo.AuthDB
 	}
 	err := db.WithContext(ctx).Model(&entity.UserSession{}).
-		Where("user_id = ? AND token = ? AND revoked = false", userID, token).
+		Where("user_id = ? AND revoked = false", userID).
 		Update("revoked", true).Error
 	return err
 }
