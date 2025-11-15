@@ -7,8 +7,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"scs-auth-service/config"
-	"scs-auth-service/models/entity"
+	"sc-auth-service/config"
+	"sc-auth-service/models/entity"
 )
 
 type Auth struct {

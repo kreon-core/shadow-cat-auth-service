@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"scs-auth-service/helpers"
-	"scs-auth-service/models/response"
+	"sc-auth-service/helpers"
+	"sc-auth-service/models/response"
 )
 
 func CatchGlobalHTTPError(c *gin.Context) {

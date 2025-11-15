@@ -25,7 +25,7 @@ format:
 	gofumpt -l -w -extra .
 	goimports -w .
 	gci write \
-		--custom-order -s standard -s default -s "prefix(scs-auth-service)" -s blank \
+		--custom-order -s standard -s default -s "prefix(sc-auth-service)" -s blank \
 		--no-lex-order --skip-generated --skip-vendor .
 	golines -w -m 120 .
 

@@ -1,4 +1,4 @@
-module scs-auth-service
+module sc-auth-service
 
 go 1.25.3
 

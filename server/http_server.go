@@ -11,15 +11,15 @@ import (
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 
-	"scs-auth-service/config"
-	"scs-auth-service/database"
-	"scs-auth-service/helpers"
-	"scs-auth-service/o11y/clog"
-	"scs-auth-service/server/controller"
-	"scs-auth-service/server/middleware"
-	"scs-auth-service/server/repository"
-	"scs-auth-service/server/router"
-	"scs-auth-service/server/service"
+	"sc-auth-service/config"
+	"sc-auth-service/database"
+	"sc-auth-service/helpers"
+	"sc-auth-service/o11y/clog"
+	"sc-auth-service/server/controller"
+	"sc-auth-service/server/middleware"
+	"sc-auth-service/server/repository"
+	"sc-auth-service/server/router"
+	"sc-auth-service/server/service"
 )
 
 const (

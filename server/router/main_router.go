@@ -7,11 +7,11 @@ import (
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
-	"scs-auth-service/config"
-	"scs-auth-service/server/controller"
-	"scs-auth-service/server/middleware"
+	"sc-auth-service/config"
+	"sc-auth-service/server/controller"
+	"sc-auth-service/server/middleware"
 
-	_ "scs-auth-service/docs/swagger" // for swagger docs
+	_ "sc-auth-service/docs/swagger" // for swagger docs
 )
 
 func LoadRoutes(

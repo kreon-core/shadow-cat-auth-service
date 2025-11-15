@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"scs-auth-service/config"
-	"scs-auth-service/helpers"
-	"scs-auth-service/models/response"
+	"sc-auth-service/config"
+	"sc-auth-service/helpers"
+	"sc-auth-service/models/response"
 )
 
 type ClientCredential struct {

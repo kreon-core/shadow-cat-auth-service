@@ -10,9 +10,9 @@ import (
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 
-	"scs-auth-service/config"
-	"scs-auth-service/helpers"
-	"scs-auth-service/o11y/clog"
+	"sc-auth-service/config"
+	"sc-auth-service/helpers"
+	"sc-auth-service/o11y/clog"
 )
 
 func LoadConfig() (*config.Config, error) {

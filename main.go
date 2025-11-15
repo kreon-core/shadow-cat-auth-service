@@ -9,9 +9,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"scs-auth-service/config/loader"
-	"scs-auth-service/o11y/clog"
-	"scs-auth-service/server"
+	"sc-auth-service/config/loader"
+	"sc-auth-service/o11y/clog"
+	"sc-auth-service/server"
 )
 
 func main() {

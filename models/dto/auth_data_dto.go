@@ -3,7 +3,7 @@ package dto
 import (
 	"time"
 
-	"scs-auth-service/models/enum"
+	"sc-auth-service/models/enum"
 )
 
 type AuthData struct {

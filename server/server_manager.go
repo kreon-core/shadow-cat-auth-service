@@ -6,10 +6,10 @@ import (
 
 	"gorm.io/gorm"
 
-	"scs-auth-service/config"
-	"scs-auth-service/database"
-	"scs-auth-service/models/entity"
-	"scs-auth-service/o11y/clog"
+	"sc-auth-service/config"
+	"sc-auth-service/database"
+	"sc-auth-service/models/entity"
+	"sc-auth-service/o11y/clog"
 )
 
 type Manager struct {

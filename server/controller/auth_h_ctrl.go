@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 
-	"scs-auth-service/config"
-	"scs-auth-service/helpers"
-	"scs-auth-service/models/request"
-	"scs-auth-service/models/response"
-	"scs-auth-service/o11y/clog"
-	"scs-auth-service/server/service"
+	"sc-auth-service/config"
+	"sc-auth-service/helpers"
+	"sc-auth-service/models/request"
+	"sc-auth-service/models/response"
+	"sc-auth-service/o11y/clog"
+	"sc-auth-service/server/service"
 )
 
 type Auth struct {

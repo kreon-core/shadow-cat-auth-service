@@ -13,13 +13,13 @@ import (
 	"gorm.io/datatypes"
 	"gorm.io/gorm"
 
-	"scs-auth-service/config"
-	"scs-auth-service/helpers"
-	"scs-auth-service/models/dto"
-	"scs-auth-service/models/entity"
-	"scs-auth-service/models/enum"
-	"scs-auth-service/models/request"
-	"scs-auth-service/server/repository"
+	"sc-auth-service/config"
+	"sc-auth-service/helpers"
+	"sc-auth-service/models/dto"
+	"sc-auth-service/models/entity"
+	"sc-auth-service/models/enum"
+	"sc-auth-service/models/request"
+	"sc-auth-service/server/repository"
 )
 
 type Auth struct {

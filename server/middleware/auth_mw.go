@@ -10,11 +10,11 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"scs-auth-service/config"
-	"scs-auth-service/helpers"
-	"scs-auth-service/models/response"
-	"scs-auth-service/o11y/clog"
-	"scs-auth-service/server/repository"
+	"sc-auth-service/config"
+	"sc-auth-service/helpers"
+	"sc-auth-service/models/response"
+	"sc-auth-service/o11y/clog"
+	"sc-auth-service/server/repository"
 )
 
 type Auth struct {

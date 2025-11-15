@@ -1,6 +1,6 @@
 package dto
 
-import "scs-auth-service/models/enum"
+import "sc-auth-service/models/enum"
 
 type AuthRefreshData struct {
 	TokenType    enum.TokenType `json:"token_type"`
