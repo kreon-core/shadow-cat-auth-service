@@ -32,8 +32,7 @@ func (m *ClientCredential) Handle(c *gin.Context) {
 	clientID := c.GetHeader("X-Client-ID")
 	signature := c.GetHeader("X-Client-Signature")
 
-	if helpers.IsBlankString(&clientID) || helpers.IsBlankString(&signature) ||
-		!strings.HasPrefix(signature, "Client ") {
+	if helpers.IsBlankString(&clientID) || helpers.IsBlankString(&signature) {
 		c.AbortWithStatusJSON(http.StatusUnauthorized, &response.Resp{
 			ReturnCode:    helpers.ESignatureInvalid,
 			ReturnMessage: helpers.Message(helpers.ESignatureInvalid),
