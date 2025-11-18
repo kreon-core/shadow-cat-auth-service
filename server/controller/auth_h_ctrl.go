@@ -8,6 +8,7 @@ import (
 
 	"sc-auth-service/config"
 	"sc-auth-service/helpers"
+	"sc-auth-service/models/dto"
 	"sc-auth-service/models/request"
 	"sc-auth-service/models/response"
 	"sc-auth-service/o11y/clog"
@@ -189,9 +190,20 @@ func (ctrl *Auth) AuthRefresh(c *gin.Context) {
 }
 
 func (ctrl *Auth) AuthVerify(c *gin.Context) {
+	userID := c.GetString("user_id")
+	role := c.GetString("role")
+
+	data := &dto.VerifiedTokenData{
+		UserID: userID,
+		Role:   role,
+	}
+
+	clog.Log().Info("Auth.AuthVerify - token verified successfully",
+		zap.String("user_id", userID), zap.String("role", role))
 	c.JSON(http.StatusOK, &response.Resp{
 		ReturnCode:    helpers.Success,
 		ReturnMessage: helpers.Message(helpers.Success),
+		Data:          data,
 	})
 }
 
