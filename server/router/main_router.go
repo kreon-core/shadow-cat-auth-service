@@ -25,8 +25,8 @@ func LoadRoutes(
 	r.Use(middleware.CatchGlobalHTTPError)
 
 	rMeta := r.Group("")
-	rMeta.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	rMeta.GET("/healthz", func(c *gin.Context) {
+		c.JSON(http.StatusOK, "healthy")
 	})
 	if !cfg.Production {
 		rMeta.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -62,5 +62,7 @@ func loadUserRoutes(
 	rg.PUT("", userCtrl.UpdateProfile)
 	rg.GET("", userCtrl.GetProfile)
 	rg.PUT("/password", userCtrl.ChangePassword)
+
+	rg.GET("/verify", authCtrl.AuthVerify)
 	rg.POST("/logout", authCtrl.Logout)
 }

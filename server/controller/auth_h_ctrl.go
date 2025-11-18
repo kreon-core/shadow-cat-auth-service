@@ -188,6 +188,13 @@ func (ctrl *Auth) AuthRefresh(c *gin.Context) {
 	})
 }
 
+func (ctrl *Auth) AuthVerify(c *gin.Context) {
+	c.JSON(http.StatusOK, &response.Resp{
+		ReturnCode:    helpers.Success,
+		ReturnMessage: helpers.Message(helpers.Success),
+	})
+}
+
 func (ctrl *Auth) Logout(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if helpers.IsBlankString(&userID) {
