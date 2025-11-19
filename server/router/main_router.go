@@ -64,5 +64,5 @@ func loadUserRoutes(
 	rg.PUT("/password", userCtrl.ChangePassword)
 
 	rg.GET("/verify", authCtrl.AuthVerify)
-	rg.POST("/logout", authCtrl.Logout)
+	rg.DELETE("/logout", authCtrl.Logout)
 }
