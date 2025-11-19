@@ -15,9 +15,10 @@ pre-commit: install generate format lint clean
 install:
 	go mod download
 
-.PHONY: generate
-generate:
-	swag init -g server/http_server.go -o docs/swagger
+.PHONY: lint
+lint:
+	golangci-lint run || true
+
 
 .PHONY: format
 format:
@@ -29,16 +30,17 @@ format:
 		--no-lex-order --skip-generated --skip-vendor .
 	golines -w -m 120 .
 
+
+.PHONY: generate
+generate:
+	swag init -g server/http_server.go -o docs/swagger
+
 .PHONY: build
-build: generate
+build:
 
 .PHONY: dev
 dev: build
 	export GIN_MODE=release && go run .
-
-.PHONY: lint
-lint:
-	golangci-lint run || true
 
 .PHONY: clean
 clean:
